@@ -81,3 +81,8 @@ a{color:var(--brand)}
 .req input{padding:12px;border:1px solid var(--line);border-radius:10px;font:inherit;background:#fff;color:var(--ink)}
 .req .note{margin:0;font-size:13px;color:var(--muted)}
 .btn.wa.off{display:block;text-align:center}
+
+.small{font-size:13px;color:var(--muted);margin-top:6px}
+.dist label{display:block;font-weight:600}
+.foot-note{margin-top:4px;font-size:13px}
+.card:focus-visible{outline:3px solid #c8892b;outline-offset:2px}

@@ -4,62 +4,89 @@
   // With Supabase configured, rooms come ONLY from the database (never show sample rooms on the live site).
   var LISTINGS = SB && SB.url ? [] : window.LISTINGS, loadFailed = false;
 
+  // ---------------------------------------------------------------
+  // ALL VISIBLE TEXT LIVES HERE (English and Arabic)
+  // ---------------------------------------------------------------
   var T = {
     en: {
-      logoAr: "قريب", heroTitle: "Find a room close to your language center",
-      heroSub: "Photos, videos, availability and walking time. All in one link.",
-      fCampus: "My language center", fArea: "Area", fType: "Type", fPrice: "Max price (RM/month)", fSort: "Sort by", fStay: "Stay length", stayAny: "Any length", stay1: "1 month", stay3: "Up to 3 months", stay6: "Up to 6 months", minStay: "Minimum stay", mo: "mo", gCenters: "Language centers", gAreas: "My center is not listed: choose area",
+      heroTitle: "Find a trusted room near your language center",
+      heroSub: "Compare rooms, see what has been verified, and know your walking time before you pay.",
+      fCampus: "My language center", fArea: "Area", fType: "Type of place", fPrice: "Maximum price (RM per month)", fSort: "Sort by",
+      fStay: "Minimum stay", stayAny: "Any", stay1: "1 month", stay3: "Up to 3 months", stay6: "Up to 6 months",
+      gCenters: "Language centers", gAreas: "My center is not listed: choose an area",
       all: "All", any: "Any", room: "Room", studio: "Studio", apartment: "Apartment",
-      sNear: "Closest first", sCheap: "Cheapest first", onlyAvail: "Show available only",
-      vList: "List", vMap: "Map", empty: "No rooms match your search. Try changing the filters.",
-      ownerTitle: "Have a room to rent?", ownerText: "List it on Qareeb and reach students looking near their campus.",
-      ownerBtn: "Contact us on WhatsApp", foot: "Student housing in Kuala Lumpur and Ampang",
-      available: "Available", reserved: "Reserved", taken: "Taken",
-      perMonth: "/month", walk: "min walk", ride: "min by car", away: "away",
+      sNear: "Closest to my center", sCheap: "Lowest price",
+      onlyAvail: "Available rooms only", onlyVerified: "Verified rooms only",
+      vList: "List", vMap: "Map",
+      resultOne: "room found", resultMany: "rooms found",
+      empty: "No rooms match your search. Try changing the filters.",
+      loadErr: "We could not load the rooms. Please check your internet connection and reload the page.",
+      ownerTitle: "Own a room or apartment near a language center?",
+      ownerText: "List it on Qareeb and reach students looking for a place in your area.",
+      ownerBtn: "Contact us on WhatsApp",
+      foot: "Student housing in Kuala Lumpur and Ampang.",
+      footNote: "Always confirm the details with the owner before you pay.",
+      available: "Available", reserved: "Reserved", taken: "Rented",
+      perMonth: "per month", walk: "min walk", ride: "min by car",
       furnished: "Furnished", unfurnished: "Unfurnished", bills: "Bills included", noBills: "Bills not included",
-      beds: "bedroom(s)", results: "rooms", request: "I want this room", notAvail: "Not available now",
-      fromCampus: "From your language center", directions: "Open walking route in Google Maps", video: "Watch video",
-      msg: "Hello Qareeb, I am interested in this accommodation: ",
-      reqName: "Your name", reqPhone: "Your WhatsApp number (with country code)",
+      minStay: "Minimum stay", minStayShort: "Min. stay",
+      g_mixed: "Mixed", g_women: "Women only", g_men: "Men only", g_family: "Families",
+      request: "I want this room", notAvail: "Not available at the moment",
       reqNote: "One tap: WhatsApp opens with a ready message about this room.",
-      loadErr: "Could not load the rooms. Please check your internet and refresh the page.",
-      verified: "Verified", onlyVerified: "Verified only", trustTitle: "Trust and lifestyle",
-      vVideo: "Live video tour done", vOwner: "Owner identity checked", vVisit: "Visited by Qareeb team",
-      notYet: "Not yet checked", mosque: "Nearest mosque", halalFood: "Halal food", arabicHost: "Arabic-speaking owner or tenants",
-      yes: "Yes", unknown: "Not confirmed", safeTitle: "Stay safe: never pay before you see",
-      safe1: "Ask for a live video call or visit the place first.",
+      msg: "Hello, I am interested in this accommodation I found on Qareeb: ",
+      fromCampus: "Distance from your language center", distNote: "Walking times are estimates.",
+      directions: "View the walking route in Google Maps",
+      trustTitle: "Verification and nearby essentials",
+      vVideo: "Live video tour completed", vOwner: "Owner identity checked", vVisit: "Visited in person by the Qareeb team",
+      notYet: "not yet", mosque: "Nearest mosque", halalFood: "Nearest halal food", arabicHost: "Arabic-speaking owner or tenants",
+      arabicShort: "Arabic spoken", verified: "Verified",
+      yes: "Yes", unknown: "Not confirmed",
+      safeTitle: "Stay safe: never pay before you see the place",
+      safe1: "Ask for a live video call, or visit the place before you pay.",
       safe2: "Do not pay a deposit because someone says \"hurry, others want it\".",
-      safe3: "Never pay 6 months or more upfront. Get a written tenancy agreement.",
-      safe4: "Pay to the owner's verified account, not a personal name you don't know.",
-      safe5: "Scammed? Call the National Scam Response Centre: 997"
+      safe3: "Do not pay 6 months or more in advance. Ask for a written tenancy agreement.",
+      safe4: "Pay to the owner's verified account, not to a personal name you do not know.",
+      safe5: "Scammed? Call Malaysia's National Scam Response Centre: 997"
     },
     ar: {
-      logoAr: "Qareeb", heroTitle: "اعثر على سكن قريب من مركز اللغة",
-      heroSub: "صور وفيديو والتوفر ووقت المشي. كل شيء في رابط واحد.",
-      fCampus: "مركز اللغة الخاص بي", fArea: "المنطقة", fType: "النوع", fPrice: "أقصى سعر (رينغيت/شهر)", fSort: "ترتيب حسب", fStay: "مدة الإقامة", stayAny: "أي مدة", stay1: "شهر واحد", stay3: "حتى ٣ أشهر", stay6: "حتى ٦ أشهر", minStay: "الحد الأدنى للإقامة", mo: "شهر", gCenters: "مراكز اللغة", gAreas: "مركزي غير موجود: اختر المنطقة",
-      all: "الكل", any: "أي", room: "غرفة", studio: "ستوديو", apartment: "شقة",
-      sNear: "الأقرب أولاً", sCheap: "الأرخص أولاً", onlyAvail: "إظهار المتاح فقط",
-      vList: "قائمة", vMap: "خريطة", empty: "لا توجد نتائج. جرّب تغيير الفلاتر.",
-      ownerTitle: "عندك غرفة للإيجار؟", ownerText: "أضفها في قريب لتصل إلى الطلاب الباحثين قرب جامعاتهم.",
-      ownerBtn: "تواصل معنا عبر واتساب", foot: "سكن الطلاب في كوالالمبور وأمبانغ",
-      available: "متاح", reserved: "محجوز", taken: "تم التأجير",
-      perMonth: "/شهر", walk: "دقيقة مشياً", ride: "دقيقة بالسيارة", away: "",
+      heroTitle: "ابحث عن سكن موثوق قريب من مركز اللغة",
+      heroSub: "قارن بين الغرف، واعرف ما تم التحقق منه ووقت المشي إلى مركزك قبل أن تدفع.",
+      fCampus: "مركز اللغة الذي أدرس فيه", fArea: "المنطقة", fType: "نوع السكن", fPrice: "أعلى سعر (رينغيت ماليزي شهرياً)", fSort: "ترتيب النتائج",
+      fStay: "الحد الأدنى للإقامة", stayAny: "أي مدة", stay1: "شهر واحد", stay3: "حتى ٣ أشهر", stay6: "حتى ٦ أشهر",
+      gCenters: "مراكز اللغة", gAreas: "مركزي غير مدرج: اختر المنطقة",
+      all: "الكل", any: "أي سعر", room: "غرفة", studio: "استوديو", apartment: "شقة",
+      sNear: "الأقرب إلى مركزي", sCheap: "الأقل سعراً",
+      onlyAvail: "المتاح فقط", onlyVerified: "الموثّق فقط",
+      vList: "قائمة", vMap: "خريطة",
+      resultOne: "نتيجة", resultMany: "نتائج",
+      empty: "لا توجد غرف مطابقة لبحثك. جرّب تغيير خيارات التصفية.",
+      loadErr: "تعذّر تحميل الغرف. تحقق من اتصالك بالإنترنت ثم أعد تحميل الصفحة.",
+      ownerTitle: "هل تملك غرفة أو شقة قريبة من مركز لغة؟",
+      ownerText: "أضف سكنك في «قريب» لتصل إلى الطلاب الباحثين عن سكن في منطقتك.",
+      ownerBtn: "تواصل معنا عبر واتساب",
+      foot: "سكن الطلاب في كوالالمبور وأمبانغ.",
+      footNote: "تأكد دائماً من التفاصيل مع المالك قبل الدفع.",
+      available: "متاح", reserved: "محجوز", taken: "تم تأجيره",
+      perMonth: "شهرياً", walk: "دقيقة سيراً", ride: "دقيقة بالسيارة",
       furnished: "مفروش", unfurnished: "غير مفروش", bills: "الفواتير مشمولة", noBills: "الفواتير غير مشمولة",
-      beds: "غرفة نوم", results: "نتيجة", request: "أريد هذه الغرفة", notAvail: "غير متاح حالياً",
-      fromCampus: "من مركز اللغة", directions: "افتح طريق المشي في خرائط جوجل", video: "شاهد الفيديو",
-      msg: "مرحباً قريب، أنا مهتم بهذا السكن: ",
-      reqName: "اسمك", reqPhone: "رقم واتساب الخاص بك (مع رمز الدولة)",
-      reqNote: "بنقرة واحدة: يفتح واتساب مع رسالة جاهزة عن هذه الغرفة.",
-      loadErr: "تعذّر تحميل الغرف. تحقق من الإنترنت وأعد تحميل الصفحة.",
-      verified: "موثّق", onlyVerified: "الموثّق فقط", trustTitle: "الثقة ونمط الحياة",
-      vVideo: "تمت جولة فيديو مباشرة", vOwner: "تم التحقق من هوية المالك", vVisit: "زاره فريق قريب",
-      notYet: "لم يتم بعد", mosque: "أقرب مسجد", halalFood: "طعام حلال", arabicHost: "المالك أو السكان يتحدثون العربية",
-      yes: "نعم", unknown: "غير مؤكد", safeTitle: "حافظ على أمانك: لا تدفع قبل أن ترى",
-      safe1: "اطلب مكالمة فيديو مباشرة أو زر المكان أولاً.",
-      safe2: "لا تدفع عربوناً لأن أحدهم يقول \"استعجل، غيرك يريدها\".",
-      safe3: "لا تدفع ٦ أشهر أو أكثر مقدماً. احصل على عقد إيجار مكتوب.",
-      safe4: "ادفع لحساب المالك الموثّق وليس لاسم شخصي لا تعرفه.",
-      safe5: "تعرضت للاحتيال؟ اتصل بمركز الاستجابة الوطني للاحتيال: 997"
+      minStay: "الحد الأدنى للإقامة", minStayShort: "الحد الأدنى",
+      g_mixed: "مختلط", g_women: "للنساء فقط", g_men: "للرجال فقط", g_family: "للعائلات",
+      request: "أريد هذه الغرفة", notAvail: "غير متاحة حالياً",
+      reqNote: "بنقرة واحدة: يفتح واتساب برسالة جاهزة عن هذه الغرفة.",
+      msg: "مرحباً، أنا مهتم بهذا السكن الذي وجدته على موقع قريب: ",
+      fromCampus: "المسافة من مركز اللغة", distNote: "أوقات المشي تقديرية.",
+      directions: "عرض طريق المشي في خرائط جوجل",
+      trustTitle: "التوثيق والخدمات القريبة",
+      vVideo: "تمت جولة فيديو مباشرة", vOwner: "تم التحقق من هوية المالك", vVisit: "زيارة ميدانية من فريق قريب",
+      notYet: "لم يتم بعد", mosque: "أقرب مسجد", halalFood: "أقرب طعام حلال", arabicHost: "المالك أو السكان يتحدثون العربية",
+      arabicShort: "يتحدثون العربية", verified: "موثّق",
+      yes: "نعم", unknown: "غير مؤكد",
+      safeTitle: "للحفاظ على أمانك: لا تدفع قبل أن ترى السكن",
+      safe1: "اطلب مكالمة فيديو مباشرة، أو زر السكن قبل الدفع.",
+      safe2: "لا تدفع عربوناً بسبب عبارات مثل «بادر، فهناك من يريدها».",
+      safe3: "لا تدفع إيجار ٦ أشهر أو أكثر مقدماً، واطلب عقد إيجار مكتوباً.",
+      safe4: "ادفع إلى حساب المالك الموثّق، لا إلى اسم شخص لا تعرفه.",
+      safe5: "هل تعرضت للاحتيال؟ اتصل بمركز الاستجابة الوطني للاحتيال في ماليزيا: 997"
     }
   };
 
@@ -68,6 +95,28 @@
   var $ = function (id) { return document.getElementById(id); };
   var t = function (k) { return T[lang][k] || k; };
   var pick = function (o) { return o[lang] || o.en; };
+
+  // "1 month", "3 months" / Arabic plural forms
+  function months(n) {
+    if (lang === "ar") return n === 1 ? "شهر واحد" : n === 2 ? "شهران" : n <= 10 ? n + " أشهر" : n + " شهراً";
+    return n === 1 ? "1 month" : n + " months";
+  }
+  function bedrooms(n) {
+    if (lang === "ar") return n === 1 ? "غرفة نوم واحدة" : n === 2 ? "غرفتا نوم" : n + " غرف نوم";
+    return n === 1 ? "1 bedroom" : n + " bedrooms";
+  }
+  // "5 min walk" / Arabic plural forms (دقيقة، دقيقتان، دقائق)
+  function mins(n) {
+    if (lang !== "ar") return n + " ";
+    return n === 1 ? "" : n === 2 ? "" : n + " ";
+  }
+  function unit(n, word) {
+    if (lang !== "ar") return word;
+    return n === 1 ? "دقيقة واحدة" : n === 2 ? "دقيقتان" : n <= 10 ? "دقائق" : "دقيقة";
+  }
+  function walkText(n) { return lang === "ar" ? mins(n) + unit(n) + " سيراً" : n + " " + t("walk"); }
+  function rideText(n) { return lang === "ar" ? mins(n) + unit(n) + " بالسيارة" : n + " " + t("ride"); }
+  function money(n) { return "RM " + Number(n).toLocaleString("en-US"); }
 
   // ---- distance: straight line x 1.3 to approximate real streets; walking ~80 m/min ----
   function distKm(a, b, c, d) {
@@ -81,7 +130,7 @@
   }
   function tripText(tr) {
     var km = tr.km.toFixed(1) + " km";
-    return tr.walk <= 30 ? "🚶 " + tr.walk + " " + t("walk") + " · " + km : "🚗 ~" + tr.ride + " " + t("ride") + " · " + km;
+    return tr.walk <= 30 ? "🚶 " + walkText(tr.walk) + " · " + km : "🚗 ~" + rideText(tr.ride) + " · " + km;
   }
 
   function isVerified(l) { return l.trust.video && l.trust.owner; }
@@ -90,8 +139,8 @@
     var x = l.trust;
     return '<div class="dist trust"><b>' + t("trustTitle") + '</b><ul style="list-style:none;padding:0;margin:8px 0 0">' +
       row(x.video, t("vVideo")) + row(x.owner, t("vOwner")) + row(x.visited, t("vVisit")) +
-      '<li style="margin:4px 0">🕌 ' + t("mosque") + ": " + (x.mosque == null ? t("unknown") : "<b>" + x.mosque + " " + t("walk") + "</b>") + "</li>" +
-      '<li style="margin:4px 0">🍽️ ' + t("halalFood") + ": " + (x.halal == null ? t("unknown") : "<b>" + x.halal + " " + t("walk") + "</b>") + "</li>" +
+      '<li style="margin:4px 0">🕌 ' + t("mosque") + ": " + (x.mosque == null ? t("unknown") : "<b>" + walkText(x.mosque) + "</b>") + "</li>" +
+      '<li style="margin:4px 0">🍽️ ' + t("halalFood") + ": " + (x.halal == null ? t("unknown") : "<b>" + walkText(x.halal) + "</b>") + "</li>" +
       '<li style="margin:4px 0">🗣️ ' + t("arabicHost") + ": " + (x.arabic ? "<b>" + t("yes") + "</b>" : t("unknown")) + "</li></ul></div>";
   }
   function safeHtml() {
@@ -105,9 +154,16 @@
     return grp("center", t("gCenters")) + grp("area", t("gAreas"));
   }
 
-  function art(l, big) {
-    return "background-image:linear-gradient(135deg," + l.colors[0] + "," + l.colors[1] + ")";
+  // Area filter is built from the areas that actually have rooms
+  function areaOptions() {
+    var sel = $("area"), keep = sel.value, seen = {};
+    LISTINGS.forEach(function (l) { seen[l.area] = true; });
+    sel.innerHTML = '<option value="">' + t("all") + "</option>" + Object.keys(seen).sort().map(function (a) {
+      return '<option value="' + a + '"' + (a === keep ? " selected" : "") + ">" + a + "</option>";
+    }).join("");
   }
+
+  function art(l) { return "background-image:linear-gradient(135deg," + l.colors[0] + "," + l.colors[1] + ")"; }
   function photoStyle(l) { return l.photos && l.photos.length ? "background-image:url('" + l.photos[0] + "')" : art(l); }
 
   function filtered() {
@@ -122,18 +178,19 @@
 
   function render() {
     var list = filtered(), g = $("grid");
-    $("count").textContent = list.length + " " + t("results");
+    $("count").textContent = list.length + " " + t(list.length === 1 ? "resultOne" : "resultMany");
     $("empty").textContent = loadFailed ? t("loadErr") : t("empty");
     $("empty").hidden = list.length > 0 && !loadFailed;
     g.innerHTML = list.map(function (x) {
       var l = x.l;
-      return '<article class="card ' + (l.status === "taken" ? "dim" : "") + '" data-id="' + l.id + '">' +
+      return '<article class="card ' + (l.status === "taken" ? "dim" : "") + '" data-id="' + l.id + '" tabindex="0" role="button">' +
         '<div class="ph" style="' + photoStyle(l) + '"><span class="badge ' + l.status + '">' + t(l.status) + "</span>" + (l.photos.length ? "" : "🏠") + "</div>" +
         '<div class="body"><h3>' + pick(l.title) + '</h3><div class="meta">' + t(l.type) + " · " + l.area + '</div>' +
         '<span class="walk">' + tripText(x.tr) + '</span>' +
         (isVerified(l) ? '<span class="walk gold">✔ ' + t("verified") + "</span>" : "") +
-        '<div class="meta" style="margin-top:6px">⏱ ' + l.minStay + " " + t("mo") + " · 🕌 " + (l.trust.mosque == null ? "–" : l.trust.mosque + " " + t("walk")) + (l.trust.arabic ? " · 🗣️ AR" : "") + "</div>" +
-        '<div class="price">RM ' + l.price + " <small>" + t("perMonth") + "</small></div></div></article>";
+        '<div class="meta" style="margin-top:8px">⏱ ' + t("minStayShort") + ": " + months(l.minStay) + "</div>" +
+        '<div class="meta">🕌 ' + (l.trust.mosque == null ? "–" : walkText(l.trust.mosque)) + (l.trust.arabic ? " · 🗣️ " + t("arabicShort") : "") + "</div>" +
+        '<div class="price">' + money(l.price) + " <small>" + t("perMonth") + "</small></div></div></article>";
     }).join("");
     if (map) renderMarkers(list);
   }
@@ -143,13 +200,14 @@
     var cm = L.marker([campus.lat, campus.lng]).addTo(map).bindPopup("🎓 " + pick(campus.name)); markers.push(cm);
     list.forEach(function (x) {
       var m = L.circleMarker([x.l.lat, x.l.lng], { radius: 10, color: "#fff", weight: 2, fillColor: x.l.status === "available" ? "#0f5c70" : "#8a5a00", fillOpacity: 1 }).addTo(map);
-      m.bindTooltip("RM " + x.l.price); m.on("click", function () { openDetail(x.l.id); }); markers.push(m);
+      m.bindTooltip(money(x.l.price)); m.on("click", function () { openDetail(x.l.id); }); markers.push(m);
     });
     var pts = list.map(function (x) { return [x.l.lat, x.l.lng]; }).concat([[campus.lat, campus.lng]]);
     map.fitBounds(pts, { padding: [30, 30], maxZoom: 15 });
   }
 
   function waLink(text) { return "https://wa.me/" + CFG.whatsapp + "?text=" + encodeURIComponent(text); }
+  function plain(s) { return String(s).replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'"); }
 
   function openDetail(id) {
     var l = LISTINGS.filter(function (x) { return x.id === id; })[0], tr = trip(l, campus);
@@ -162,18 +220,20 @@
     $("detail").innerHTML = '<div class="gallery">' + shots + "</div>" + vid +
       '<div class="d"><span class="badge ' + l.status + '" style="position:static;border:1px solid var(--line)">' + t(l.status) + "</span>" +
       "<h2>" + pick(l.title) + "</h2>" +
-      '<div class="price">RM ' + l.price + " <small>" + t("perMonth") + "</small></div>" +
-      '<div class="tags"><span class="tag">' + t(l.type) + '</span><span class="tag">' + l.area + '</span><span class="tag">' + l.beds + " " + t("beds") + '</span><span class="tag">⏱ ' + t("minStay") + ": " + l.minStay + " " + t("mo") + '</span><span class="tag">' + t(l.furnished ? "furnished" : "unfurnished") + '</span><span class="tag">' + t(l.bills ? "bills" : "noBills") + "</span></div>" +
+      '<div class="price">' + money(l.price) + " <small>" + t("perMonth") + "</small></div>" +
+      '<div class="tags"><span class="tag">' + t(l.type) + '</span><span class="tag">' + l.area + '</span><span class="tag">' + bedrooms(l.beds) +
+      '</span><span class="tag">⏱ ' + t("minStay") + ": " + months(l.minStay) + '</span><span class="tag">' + t(l.furnished ? "furnished" : "unfurnished") +
+      '</span><span class="tag">' + t(l.bills ? "bills" : "noBills") + '</span><span class="tag">' + t("g_" + (l.gender || "mixed")) + "</span></div>" +
       "<p>" + pick(l.desc) + "</p>" +
-      '<div class="dist">' + t("fromCampus") + ': <select id="dCampus">' + opts + '</select><div style="margin-top:8px" id="dTrip"><b>' + tripText(tr) + "</b></div>" +
-      '<a href="' + gm + '" target="_blank" rel="noopener" style="font-size:14px">' + t("directions") + "</a></div>" +
+      '<div class="dist"><label for="dCampus">' + t("fromCampus") + '</label><select id="dCampus">' + opts + '</select><div style="margin-top:8px" id="dTrip"><b>' + tripText(tr) + "</b></div>" +
+      '<a href="' + gm + '" target="_blank" rel="noopener" style="font-size:14px">' + t("directions") + '</a><div class="small">' + t("distNote") + "</div></div>" +
       trustHtml(l) + '<div id="dmap" class="dmap"></div>' + safeHtml() +
       (ok ? '<div class="req"><button id="askBtn" class="btn wa" type="button">💬 ' + t("request") + '</button><p class="note">' + t("reqNote") + "</p></div>"
         : '<span class="btn wa off">' + t("notAvail") + "</span>") + "</div>";
     $("modal").hidden = false; document.body.style.overflow = "hidden";
     if ($("askBtn")) $("askBtn").onclick = function () {
       sendRequest(l);   // counts the interest in the background
-      window.open(waLink(t("msg") + l.title.en.replace(/&amp;/g, "&") + " (#" + l.id + ", RM " + l.price + ", " + pick(campus.name).replace(/&amp;/g, "&") + ")"), "_blank", "noopener");
+      window.open(waLink(t("msg") + plain(l.title.en) + " (#" + l.id + ", " + money(l.price) + ", " + plain(pick(campus.name)) + ")"), "_blank", "noopener");
     };
     $("dCampus").onchange = function () {
       campus = CAMPUSES.filter(function (c) { return c.id === this.value; }.bind(this))[0]; $("campus").value = campus.id; render(); openDetail(id);
@@ -193,8 +253,10 @@
     document.documentElement.lang = lang; document.documentElement.dir = lang === "ar" ? "rtl" : "ltr";
     document.querySelectorAll("[data-i18n]").forEach(function (el) { el.textContent = t(el.getAttribute("data-i18n")); });
     $("langBtn").textContent = lang === "ar" ? "English" : "العربية";
+    $("close").setAttribute("aria-label", lang === "ar" ? "إغلاق" : "Close");
     $("campus").innerHTML = campusOptions();
-    $("ownerBtn").href = waLink(lang === "ar" ? "مرحباً قريب، عندي سكن أريد إضافته." : "Hello Qareeb, I have accommodation I would like to list.");
+    areaOptions();
+    $("ownerBtn").href = waLink(lang === "ar" ? "مرحباً، لدي سكن وأرغب في إضافته إلى موقع قريب." : "Hello, I have accommodation and would like to list it on Qareeb.");
     render();
   }
 
@@ -232,7 +294,7 @@
     return {
       id: r.id, type: r.type, area: esc(r.area), price: r.price, status: r.status, lat: r.lat, lng: r.lng, beds: r.beds,
       furnished: r.furnished, bills: r.bills, minStay: r.min_stay, gender: r.gender,
-      title: { en: esc(r.title_en), ar: esc(r.title_ar) }, desc: { en: esc(r.desc_en), ar: esc(r.desc_ar) },
+      title: { en: esc(r.title_en), ar: esc(r.title_ar || r.title_en) }, desc: { en: esc(r.desc_en), ar: esc(r.desc_ar || r.desc_en) },
       photos: (r.photos || []).map(safeUrl).filter(Boolean), video: safeUrl(r.video) || "", colors: cols,
       trust: { video: r.v_video, owner: r.v_owner, visited: r.v_visited, mosque: r.mosque_min, halal: r.halal_min, arabic: r.arabic }
     };
@@ -240,7 +302,7 @@
   function load() {
     if (!SB || !SB.url) return Promise.resolve();
     return Promise.all([sbGet("centers?select=*&order=sort"), sbGet("listings?select=*&order=id")]).then(function (res) {
-      if (res[0].length) CAMPUSES = res[0].map(function (c) { return { id: c.id, group: c.grp, name: { en: esc(c.name_en), ar: esc(c.name_ar) }, lat: c.lat, lng: c.lng }; });
+      if (res[0].length) CAMPUSES = res[0].map(function (c) { return { id: c.id, group: c.grp, name: { en: esc(c.name_en), ar: esc(c.name_ar || c.name_en) }, lat: c.lat, lng: c.lng }; });
       campus = CAMPUSES[0];
       LISTINGS = res[1].map(mapListing);
     }).catch(function (e) { console.warn("Could not load from Supabase", e); loadFailed = true; });
@@ -251,6 +313,7 @@
   ["area", "type", "price", "stay", "sort", "onlyAvail", "onlyVerified"].forEach(function (id) { $(id).onchange = render; });
   document.querySelectorAll(".vbtn").forEach(function (b) { b.onclick = function () { setView(b.dataset.view); }; });
   $("grid").onclick = function (e) { var c = e.target.closest(".card"); if (c) openDetail(+c.dataset.id); };
+  $("grid").onkeydown = function (e) { if (e.key === "Enter" || e.key === " ") { var c = e.target.closest(".card"); if (c) { e.preventDefault(); openDetail(+c.dataset.id); } } };
   $("close").onclick = closeDetail;
   $("modal").onclick = function (e) { if (e.target === $("modal")) closeDetail(); };
   document.addEventListener("keydown", function (e) { if (e.key === "Escape") closeDetail(); });

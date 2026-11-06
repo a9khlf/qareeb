@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Qareeb | Student Rooms in Kuala Lumpur</title>
+<meta name="description" content="Find student rooms, studios and apartments in Kuala Lumpur and Ampang. See photos, availability and walking time to your campus.">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="top">
+  <div class="wrap bar">
+    <a class="logo" href="#"><span class="logo-mark">Q</span><span>Qareeb <small data-i18n="logoAr">قريب</small></span></a>
+    <button id="langBtn" class="lang" type="button">العربية</button>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="wrap">
+    <h1 data-i18n="heroTitle">Find a room close to your language center</h1>
+    <p data-i18n="heroSub">Photos, videos, availability and walking time. All in one link.</p>
+
+    <div class="search">
+      <label>
+        <span data-i18n="fCampus">My language center</span>
+        <select id="campus"></select>
+      </label>
+      <label>
+        <span data-i18n="fArea">Area</span>
+        <select id="area">
+          <option value="" data-i18n="all">All</option>
+          <option value="Kuala Lumpur">Kuala Lumpur</option>
+          <option value="Ampang">Ampang</option>
+        </select>
+      </label>
+      <label>
+        <span data-i18n="fType">Type</span>
+        <select id="type">
+          <option value="" data-i18n="all">All</option>
+          <option value="room" data-i18n="room">Room</option>
+          <option value="studio" data-i18n="studio">Studio</option>
+          <option value="apartment" data-i18n="apartment">Apartment</option>
+        </select>
+      </label>
+      <label>
+        <span data-i18n="fPrice">Max price (RM/month)</span>
+        <select id="price">
+          <option value="" data-i18n="any">Any</option>
+          <option value="700">700</option>
+          <option value="1000">1000</option>
+          <option value="1500">1500</option>
+          <option value="2500">2500</option>
+        </select>
+      </label>
+      <label>
+        <span data-i18n="fStay">Stay length</span>
+        <select id="stay">
+          <option value="" data-i18n="stayAny">Any length</option>
+          <option value="1" data-i18n="stay1">1 month</option>
+          <option value="3" data-i18n="stay3">Up to 3 months</option>
+          <option value="6" data-i18n="stay6">Up to 6 months</option>
+        </select>
+      </label>
+      <label>
+        <span data-i18n="fSort">Sort by</span>
+        <select id="sort">
+          <option value="near" data-i18n="sNear">Closest first</option>
+          <option value="cheap" data-i18n="sCheap">Cheapest first</option>
+        </select>
+      </label>
+    </div>
+    <label class="check"><input type="checkbox" id="onlyAvail" checked> <span data-i18n="onlyAvail">Show available only</span></label>
+    <label class="check"><input type="checkbox" id="onlyVerified"> <span data-i18n="onlyVerified">Verified only</span></label>
+  </div>
+</section>
+
+<main class="wrap">
+  <div class="views">
+    <button class="vbtn on" data-view="list" type="button" data-i18n="vList">List</button>
+    <button class="vbtn" data-view="map" type="button" data-i18n="vMap">Map</button>
+    <span id="count" class="count"></span>
+  </div>
+  <div id="mapBox" class="mapbox" hidden><div id="map"></div></div>
+  <div id="grid" class="grid"></div>
+  <p id="empty" class="empty" hidden data-i18n="empty">No rooms match your search. Try changing the filters.</p>
+</main>
+
+<section class="owner wrap">
+  <h2 data-i18n="ownerTitle">Have a room to rent?</h2>
+  <p data-i18n="ownerText">List it on Qareeb and reach students looking near their campus.</p>
+  <a id="ownerBtn" class="btn" target="_blank" rel="noopener" data-i18n="ownerBtn">Contact us on WhatsApp</a>
+</section>
+
+<footer>
+  <div class="wrap"><span>© Qareeb</span> · <span data-i18n="foot">Student housing in Kuala Lumpur and Ampang</span></div>
+</footer>
+
+<div id="modal" class="modal" hidden>
+  <div class="sheet" role="dialog" aria-modal="true">
+    <button id="close" class="x" type="button" aria-label="Close">✕</button>
+    <div id="detail"></div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

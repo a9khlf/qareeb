@@ -1,5 +1,5 @@
 -- ============================================================
--- QAREEB ADMIN SETUP (run AFTER schema.sql)
+-- QAREEB ADMIN SETUP (run AFTER schema.sql, update-1.sql, update-2.sql and update-3.sql)
 --
 -- Who can edit the site?  Only users listed in the "admins" table.
 -- Everyone else (including anyone who signs up) can still only do what
@@ -49,22 +49,28 @@ create policy "admin deletes centers"     on public.centers  for delete to authe
 create policy "admin reads requests"      on public.requests for select to authenticated using (public.is_admin());
 create policy "admin deletes requests"    on public.requests for delete to authenticated using (public.is_admin());
 
+-- Centers students looked for but are not listed yet (table is created in update-2.sql)
+grant select, delete on public.center_requests to authenticated;
+create policy "admin reads center suggestions"   on public.center_requests for select to authenticated using (public.is_admin());
+create policy "admin deletes center suggestions" on public.center_requests for delete to authenticated using (public.is_admin());
+
 -- 3) Photo and video storage ----------------------------------
 -- Public buckets: anyone can VIEW a file if they have its link.
 -- Only admins can upload, replace or delete files.
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types) values
   ('room-photos', 'room-photos', true,  5242880, array['image/jpeg','image/png','image/webp']),
-  ('room-videos', 'room-videos', true, 52428800, array['video/mp4','video/webm'])
+  ('room-videos', 'room-videos', true, 52428800, array['video/mp4','video/webm']),
+  ('center-logos', 'center-logos', true, 2097152, array['image/png','image/jpeg','image/webp'])
 on conflict (id) do nothing;
 
 create policy "admin uploads media" on storage.objects for insert to authenticated
-  with check (bucket_id in ('room-photos','room-videos') and public.is_admin());
+  with check (bucket_id in ('room-photos','room-videos','center-logos') and public.is_admin());
 create policy "admin lists media" on storage.objects for select to authenticated
-  using (bucket_id in ('room-photos','room-videos') and public.is_admin());
+  using (bucket_id in ('room-photos','room-videos','center-logos') and public.is_admin());
 create policy "admin replaces media" on storage.objects for update to authenticated
-  using (bucket_id in ('room-photos','room-videos') and public.is_admin());
+  using (bucket_id in ('room-photos','room-videos','center-logos') and public.is_admin());
 create policy "admin deletes media" on storage.objects for delete to authenticated
-  using (bucket_id in ('room-photos','room-videos') and public.is_admin());
+  using (bucket_id in ('room-photos','room-videos','center-logos') and public.is_admin());
 
 -- 4) Make yourself an admin -----------------------------------
 -- Replace YOUR_ADMIN_EMAIL with the email you used in step 1.

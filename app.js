@@ -26,7 +26,7 @@
       loadErr: "We could not load the rooms. Please check your internet connection and reload the page.",
       walkGroup: "Within walking distance (up to 20 minutes)", farGroup: "A short ride away",
       chooseCenter: "Choose your language center above to see walking times and the closest rooms.",
-      sgCenters: "Language centers and areas", sgArea: "Area", sgMap: "Places on the map", sgSearching: "Searching the map…",
+      sgCenters: "Language centers and areas", sgArea: "Area", sgCentersOnly: "Language centers", sgAreas: "Buildings and areas (if your center is not listed)", sgMap: "Places on the map", sgSearching: "Searching the map…",
       sgNone: "No match found. Try the street or building name, or drop a pin.",
       sgError: "Map search is not available right now. You can drop a pin instead.",
       pinOption: "📍 Can't find it? Drop a pin on the map", pinTitle: "Show us where your language center is",
@@ -77,7 +77,7 @@
       loadErr: "تعذّر تحميل الغرف. تحقق من اتصالك بالإنترنت ثم أعد تحميل الصفحة.",
       walkGroup: "على مسافة مشي (حتى ٢٠ دقيقة)", farGroup: "على بعد مشوار قصير",
       chooseCenter: "اختر مركز اللغة أعلاه لترى أوقات المشي وأقرب الغرف.",
-      sgCenters: "مراكز اللغة والمناطق", sgArea: "منطقة", sgMap: "أماكن على الخريطة", sgSearching: "جارٍ البحث في الخريطة…",
+      sgCenters: "مراكز اللغة والمناطق", sgArea: "منطقة", sgCentersOnly: "مراكز اللغة", sgAreas: "المباني والمناطق (إن لم يكن مركزك مدرجاً)", sgMap: "أماكن على الخريطة", sgSearching: "جارٍ البحث في الخريطة…",
       sgNone: "لا توجد نتيجة. جرّب اسم الشارع أو المبنى، أو حدّد الموقع على الخريطة.",
       sgError: "البحث في الخريطة غير متاح حالياً. يمكنك تحديد الموقع على الخريطة.",
       pinOption: "📍 لا تجده؟ حدّد الموقع على الخريطة", pinTitle: "أرِنا أين يقع مركز اللغة",
@@ -319,18 +319,39 @@
       if (!toks.length) return c.group === "center";
       var hay = norm(plain(c.name.en) + " " + plain(c.name.ar));
       return toks.every(function (w) { return hay.indexOf(w) >= 0; });
-    }).slice(0, 14);
+    }).sort(function (a, b) {   // language centers first, then areas; each block in alphabetical order
+      var ga = a.group === "area" ? 1 : 0, gb = b.group === "area" ? 1 : 0;
+      return ga - gb || plain(pick(a.name)).localeCompare(plain(pick(b.name)), lang === "ar" ? "ar" : "en", { sensitivity: "base" });
+    }).slice(0, 40);
   }
-  function optLi(i, title, sub) {
-    return '<li role="option" id="sg' + i + '" data-i="' + i + '"' + (i === sugIdx ? ' class="on" aria-selected="true"' : "") + ">" + title + (sub ? '<span class="sub">' + sub + "</span>" : "") + "</li>";
+  // Center badge: the uploaded logo when there is one, otherwise a neutral badge with initials
+  var GENERIC_INITIAL = { the: 1, language: 1, languages: 1, centre: 1, center: 1, centers: 1, centres: 1, international: 1, english: 1, academy: 1, of: 1, and: 1 };
+  function initials(name) {
+    var w = plain(name).replace(/\(.*?\)/g, "").split(/\s+/).filter(function (x) { return x && !GENERIC_INITIAL[x.toLowerCase()] && /^[A-Za-z0-9]/.test(x); });
+    if (!w.length) return "?";
+    return (w[1] ? w[0].charAt(0) + w[1].charAt(0) : w[0].slice(0, 2)).toUpperCase();
+  }
+  function hue(s) { var h = 0; for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 360; return h; }
+  var PIN_BADGE = '<span class="cbadge" style="background:#566468" aria-hidden="true">📍</span>';
+  function centerBadge(c) {
+    if (c.group !== "center") return PIN_BADGE;
+    if (c.logo) return '<img class="clogo" src="' + c.logo + '" alt="" loading="lazy">';
+    return '<span class="cbadge" style="background:hsl(' + hue(c.name.en) + ',45%,36%)" aria-hidden="true">' + esc(initials(c.name.en)) + "</span>";
+  }
+  function optLi(i, title, sub, badge) {
+    var inner = title + (sub ? '<span class="sub">' + sub + "</span>" : "");
+    return '<li role="option" id="sg' + i + '" data-i="' + i + '"' + (i === sugIdx ? ' class="on" aria-selected="true"' : "") + ">" + (badge ? '<span class="row">' + badge + "<span>" + inner + "</span></span>" : inner) + "</li>";
   }
   function renderSug() {
     var html = "", i = 0; sug.items = [];
-    if (sug.local.length) html += '<li class="gh" role="presentation">' + t("sgCenters") + "</li>";
-    sug.local.forEach(function (c) { sug.items.push({ k: "local", c: c }); html += optLi(i++, pick(c.name), c.group === "area" ? t("sgArea") : ""); });
+    var lastGroup = "";
+    sug.local.forEach(function (c) {
+      if (c.group !== lastGroup) { lastGroup = c.group; html += '<li class="gh" role="presentation">' + t(c.group === "area" ? "sgAreas" : "sgCentersOnly") + "</li>"; }
+      sug.items.push({ k: "local", c: c }); html += optLi(i++, pick(c.name), "", centerBadge(c));
+    });
     if (sug.geoState === "loading") html += '<li class="note" role="presentation">' + t("sgSearching") + "</li>";
     if (sug.geo.length) html += '<li class="gh" role="presentation">' + t("sgMap") + "</li>";
-    sug.geo.forEach(function (g) { sug.items.push({ k: "geo", g: g }); html += optLi(i++, g.name, g.sub); });
+    sug.geo.forEach(function (g) { sug.items.push({ k: "geo", g: g }); html += optLi(i++, g.name, g.sub, PIN_BADGE); });
     if (!sug.local.length && !sug.geo.length && sug.geoState !== "loading" && sug.q.trim().length >= 3) html += '<li class="note" role="presentation">' + (sug.geoState === "error" ? t("sgError") : t("sgNone")) + "</li>";
     sug.items.push({ k: "pin" }); html += optLi(i++, t("pinOption"), "");
     $("campusList").innerHTML = html; $("campusList").hidden = false; $("campusInput").setAttribute("aria-expanded", "true");
@@ -364,7 +385,7 @@
   function chooseSug(i) {
     var it = sug.items[i]; if (!it) return;
     if (it.k === "local") setCampus(it.c);
-    else if (it.k === "geo") setCampus({ id: "custom", group: "custom", name: { en: it.g.name, ar: it.g.name }, lat: it.g.lat, lng: it.g.lng });
+    else if (it.k === "geo") setCampus({ id: "custom", group: "custom", name: { en: it.g.name, ar: it.g.name }, lat: it.g.lat, lng: it.g.lng }, "search", $("campusInput").value.trim());
     else openPin();
   }
 
@@ -381,12 +402,24 @@
       else if (s.k === "custom" && isFinite(s.lat) && isFinite(s.lng)) { var nm = esc(s.name || ""); campus = { id: "custom", group: "custom", name: { en: nm, ar: nm }, lat: +s.lat, lng: +s.lng }; }
     } catch (e) {}
   }
-  function setCampus(c) { campus = c; storeCampus(); closeSug(); $("campusInput").value = ""; campusUI(); render(); }
+  // When a student picks a place that is not in our list, record what they were looking for,
+  // so the owner can add that center. Only a name and a position are sent (no personal data).
+  function logMissing(c, source, typed) {
+    if (!SB || !SB.url || c.group !== "custom") return;
+    var name = (typed || plain(c.name.en) || "").slice(0, 120);
+    if (!name) return;
+    fetch(SB.url + "/rest/v1/center_requests", {
+      method: "POST", keepalive: true,
+      headers: { apikey: SB.key, "Content-Type": "application/json", Prefer: "return=minimal" },
+      body: JSON.stringify({ name: name, lat: c.lat, lng: c.lng, source: source })
+    }).catch(function () {});
+  }
+  function setCampus(c, source, typed) { campus = c; storeCampus(); if (source) logMissing(c, source, typed); closeSug(); $("campusInput").value = ""; campusUI(); render(); }
   function campusUI() {
     var chosen = $("campusChosen");
     $("combo").hidden = !!campus; chosen.hidden = !campus; $("walkMax").disabled = !campus;
     if (campus) {
-      chosen.innerHTML = '<span>🎓 <b>' + pick(campus.name) + '</b></span><a href="https://www.google.com/maps/search/?api=1&query=' + campus.lat + "," + campus.lng + '" target="_blank" rel="noopener">' + t("viewMap") + '</a><button type="button" class="linkbtn" id="campusChange">' + t("change") + "</button>";
+      chosen.innerHTML = '<span class="row">' + centerBadge(campus) + "<b>" + pick(campus.name) + '</b></span><a href="https://www.google.com/maps/search/?api=1&query=' + campus.lat + "," + campus.lng + '" target="_blank" rel="noopener">' + t("viewMap") + '</a><button type="button" class="linkbtn" id="campusChange">' + t("change") + "</button>";
       $("campusChange").onclick = function () { campus = null; storeCampus(); campusUI(); render(); $("campusInput").focus(); };
     }
   }
@@ -453,7 +486,7 @@
   function load() {
     if (!SB || !SB.url) return Promise.resolve();
     return Promise.all([sbGet("centers?select=*&order=sort"), sbGet("listings?select=*&order=id")]).then(function (res) {
-      if (res[0].length) CAMPUSES = res[0].map(function (c) { return { id: c.id, group: c.grp, name: { en: esc(c.name_en), ar: esc(c.name_ar || c.name_en) }, lat: c.lat, lng: c.lng }; });
+      if (res[0].length) CAMPUSES = res[0].map(function (c) { return { id: c.id, group: c.grp, name: { en: esc(c.name_en), ar: esc(c.name_ar || c.name_en) }, lat: c.lat, lng: c.lng, logo: safeUrl(c.logo_url) || "" }; });
       LISTINGS = res[1].map(mapListing);
     }).catch(function (e) { console.warn("Could not load from Supabase", e); loadFailed = true; });
   }
@@ -480,7 +513,7 @@
   $("pinUse").onclick = function () {
     if (!pinLatLng) return;
     var typed = $("campusInput").value.trim(), en = typed ? esc(typed) : T.en.pinned, ar = typed ? esc(typed) : T.ar.pinned;
-    closePin(); setCampus({ id: "custom", group: "custom", name: { en: en, ar: ar }, lat: pinLatLng.lat, lng: pinLatLng.lng });
+    closePin(); setCampus({ id: "custom", group: "custom", name: { en: en, ar: ar }, lat: pinLatLng.lat, lng: pinLatLng.lng }, "pin", typed);
   };
   document.addEventListener("keydown", function (e) { if (e.key === "Escape") { closeDetail(); closePin(); closeSug(); } });
 

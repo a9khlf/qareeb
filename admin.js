@@ -2,7 +2,7 @@
   "use strict";
   var SB = window.QAREEB_SUPABASE, KEY = "qareeb-admin-session";
   var $ = function (id) { return document.getElementById(id); };
-  var state = { tab: "rooms", rooms: [], centers: [], requests: [] };
+  var state = { tab: "rooms", rooms: [], centers: [], requests: [], suggestions: [] };
   var session = null;
   try { session = JSON.parse(sessionStorage.getItem(KEY)); } catch (e) {}
 
@@ -67,8 +67,9 @@
     return Promise.all([
       api("/rest/v1/listings?select=*&order=id.desc"),
       api("/rest/v1/centers?select=*&order=sort"),
-      api("/rest/v1/requests?select=*&order=created_at.desc&limit=500")
-    ]).then(function (r) { state.rooms = r[0] || []; state.centers = r[1] || []; state.requests = r[2] || []; render(); })
+      api("/rest/v1/requests?select=*&order=created_at.desc&limit=500"),
+      api("/rest/v1/center_requests?select=*&order=created_at.desc&limit=500").catch(function () { return []; })
+    ]).then(function (r) { state.rooms = r[0] || []; state.centers = r[1] || []; state.requests = r[2] || []; state.suggestions = r[3] || []; render(); })
       .catch(function (e) { msg("Could not load data: " + e.message, true); });
   }
 
@@ -90,8 +91,8 @@
   function render() {
     document.querySelectorAll(".tab").forEach(function (b) { b.classList.toggle("on", b.dataset.tab === state.tab); });
     $("addBtn").textContent = state.tab === "centers" ? "+ Add center" : "+ Add room";
-    $("addBtn").hidden = state.tab === "requests";
-    if (state.tab === "rooms") renderRooms(); else if (state.tab === "requests") renderRequests(); else renderCenters();
+    $("addBtn").hidden = state.tab === "requests" || state.tab === "suggest";
+    if (state.tab === "rooms") renderRooms(); else if (state.tab === "requests") renderRequests(); else if (state.tab === "suggest") renderSuggestions(); else renderCenters();
   }
   function renderRooms() {
     if (!state.rooms.length) { $("list").innerHTML = '<p class="meta2">No rooms yet. Click "Add room" to create the first one.</p>'; return; }
@@ -123,9 +124,24 @@
           '<button class="btn danger sm" data-act="delreq" type="button">Delete</button></div>';
       }).join("");
   }
+  function slug(s) { return String(s).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40) || "center"; }
+  function renderSuggestions() {
+    if (!state.suggestions.length) { $("list").innerHTML = '<p class="meta2">No suggestions yet. When a student looks for a language center that is not on your list and picks a place or drops a pin, it appears here, so you can add it with one click.</p>'; return; }
+    var g = {};
+    state.suggestions.forEach(function (s) {
+      var k = s.name.trim().toLowerCase();
+      if (!g[k]) g[k] = { name: s.name.trim(), ids: [], n: 0, lat: s.lat, lng: s.lng, last: s.created_at };
+      g[k].ids.push(s.id); g[k].n++;
+    });
+    var arr = Object.keys(g).map(function (k) { return g[k]; }).sort(function (a, b) { return b.n - a.n; });
+    $("list").innerHTML = arr.map(function (x) {
+      return '<div class="item" data-id="' + x.ids[0] + '" data-ids="' + x.ids.join(",") + '" data-name="' + esc(x.name) + '" data-lat="' + esc(x.lat) + '" data-lng="' + esc(x.lng) + '"><div class="main"><h3>' + esc(x.name) + '</h3><div class="meta2">Asked ' + x.n + " time" + (x.n === 1 ? "" : "s") + " · position " + esc(x.lat) + ", " + esc(x.lng) + " · last " + esc(new Date(x.last).toLocaleDateString()) + "</div></div>" +
+        '<div class="acts" style="margin:0"><button class="btn sm" data-act="addsug" type="button">Add as center</button><button class="btn sec sm" data-act="delsug" type="button">Dismiss</button></div></div>';
+    }).join("");
+  }
   function renderCenters() {
     $("list").innerHTML = state.centers.map(function (c) {
-      return '<div class="item" data-id="' + esc(c.id) + '"><div class="main"><h3>' + esc(c.name_en) + '</h3><div class="meta2">' + esc(c.name_ar) + " · " + (c.grp === "center" ? "Language center" : "Area") + " · " + esc(c.lat) + ", " + esc(c.lng) + '</div></div>' +
+      return '<div class="item" data-id="' + esc(c.id) + '">' + (c.logo_url ? '<img class="clogo" src="' + esc(c.logo_url) + '" alt="">' : "") + '<div class="main"><h3>' + esc(c.name_en) + '</h3><div class="meta2">' + esc(c.name_ar) + " · " + (c.grp === "center" ? "Language center" : "Area") + " · " + esc(c.lat) + ", " + esc(c.lng) + '</div></div>' +
         '<div class="acts" style="margin:0"><button class="btn sm" data-act="editc" type="button">Edit</button><button class="btn danger sm" data-act="delc" type="button">Delete</button></div></div>';
     }).join("");
   }
@@ -138,6 +154,11 @@
     else if (act === "toggle") { var r = state.rooms.filter(function (x) { return String(x.id) === id; })[0]; patchRoom(r.id, { published: !r.published }, r.published ? "Room hidden from the website." : "Room is now visible."); }
     else if (act === "del") deleteRoom(state.rooms.filter(function (x) { return String(x.id) === id; })[0]);
     else if (act === "delreq") { if (confirm("Delete this request?")) api("/rest/v1/requests?id=eq." + encodeURIComponent(id), { method: "DELETE", write: true }).then(function () { msg("Request deleted."); loadAll(); }).catch(function (er) { msg(er.message, true); }); }
+    else if (act === "addsug") openCenterForm(null, { id: slug(item.dataset.name), name_en: item.dataset.name, lat: item.dataset.lat, lng: item.dataset.lng });
+    else if (act === "delsug") {
+      var ids = String(item.dataset.ids).split(",").filter(function (x) { return /^\d+$/.test(x); });
+      if (ids.length) api("/rest/v1/center_requests?id=in.(" + ids.join(",") + ")", { method: "DELETE", write: true }).then(function () { msg("Dismissed."); loadAll(); }).catch(function (er) { msg(er.message, true); });
+    }
     else if (act === "editc") openCenterForm(state.centers.filter(function (x) { return x.id === id; })[0]);
     else if (act === "delc") { var c = state.centers.filter(function (x) { return x.id === id; })[0]; if (confirm('Delete "' + c.name_en + '"? Students will no longer be able to pick it.')) api("/rest/v1/centers?id=eq." + encodeURIComponent(id), { method: "DELETE", write: true }).then(function () { msg("Deleted."); loadAll(); }).catch(function (er) { msg(er.message, true); }); }
   };
@@ -299,6 +320,19 @@
       img.src = u;
     });
   }
+  function shrinkPng(file, max) {   // keeps transparency, so logos keep their shape
+    return new Promise(function (res, rej) {
+      var img = new Image(), u = URL.createObjectURL(file);
+      img.onload = function () {
+        var s = Math.min(1, max / Math.max(img.width, img.height)), c = document.createElement("canvas");
+        c.width = Math.round(img.width * s); c.height = Math.round(img.height * s);
+        c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+        c.toBlob(function (b) { URL.revokeObjectURL(u); b ? res(b) : rej(new Error("Could not process the image")); }, "image/png");
+      };
+      img.onerror = function () { URL.revokeObjectURL(u); rej(new Error("That file is not a valid image")); };
+      img.src = u;
+    });
+  }
   function upload(bucket, blob, ext, type) {
     var path = Date.now() + "-" + Math.random().toString(36).slice(2, 8) + "." + ext;
     return token().then(function (tk) {
@@ -347,24 +381,37 @@
       .catch(function (e) { msg(e.message, true); $("saveBtn").disabled = false; });
   }
 
-  function openCenterForm(c) {
-    var isNew = !c; c = c || { id: "", grp: "center", name_en: "", name_ar: "", lat: "", lng: "", sort: 50 };
+  function openCenterForm(c, prefill) {
+    var isNew = !c; c = c || Object.assign({ id: "", grp: "center", name_en: "", name_ar: "", lat: "", lng: "", sort: 50 }, prefill || {});
     $("dform").innerHTML = '<form id="cf"><h2>' + (isNew ? "Add a language center or area" : "Edit") + "</h2>" +
       '<div class="fld"><label for="c-id">Short ID (letters, numbers, dashes)</label><input id="c-id" name="id" required pattern="[a-z0-9-]+" maxlength="40" value="' + esc(c.id) + '"' + (isNew ? "" : " readonly") + ' placeholder="e.g. my-center"></div>' +
       '<div class="fld"><span>Kind</span>' + sel("grp", [["center", "Language center"], ["area", "Area (for centers not listed)"]], c.grp) + "</div>" +
       '<div class="fld"><label for="c-en">Name (English)</label><input id="c-en" name="name_en" required maxlength="120" value="' + esc(c.name_en) + '"></div>' +
       '<div class="fld"><label for="c-ar">Name (Arabic)</label><input id="c-ar" name="name_ar" dir="rtl" required maxlength="120" value="' + esc(c.name_ar) + '"></div>' +
       '<div class="fld"><label for="c-co">Coordinates</label><input id="c-co" name="coords" required value="' + (c.lat !== "" ? esc(c.lat + ", " + c.lng) : "") + '" placeholder="3.1570, 101.7120"><p class="help">Use the exact address of the center in Google Maps for accurate walking times.</p></div>' +
+      '<div class="fld"><span>Logo (optional)</span><div id="logoPrev" style="min-height:40px">' + (c.logo_url ? '<img class="clogo" src="' + esc(c.logo_url) + '" alt="">' : '<span class="help">No logo yet. A badge with the initials is shown instead.</span>') + "</div>" +
+      '<input id="c-logo" type="file" accept="image/png,image/jpeg,image/webp"><input type="hidden" name="logo_url" value="' + esc(c.logo_url || "") + '">' +
+      '<p class="help">Only upload a logo the center has given you permission to use. It is resized automatically.</p>' +
+      '<button type="button" class="btn sec sm" id="logoRemove" style="justify-self:start">Remove logo</button></div>' +
       '<div class="fld"><label for="c-so">Order in the list (small numbers first)</label><input id="c-so" name="sort" type="number" required value="' + esc(c.sort) + '"></div>' +
       '<div class="foot2"><button type="button" class="btn sec" id="cancelBtn">Cancel</button><button type="submit" class="btn" id="saveBtn">Save</button></div></form>';
     dlg.showModal();
     $("cancelBtn").onclick = closeDlg;
+    var logoField = document.querySelector('#cf input[name="logo_url"]');
+    $("c-logo").onchange = function () {
+      var f = this.files && this.files[0], input = this; if (!f) return;
+      $("saveBtn").disabled = true; msg("Uploading logo...");
+      shrinkPng(f, 256).then(function (b) { return upload("center-logos", b, "png", "image/png"); }).then(function (u) {
+        logoField.value = u; $("logoPrev").innerHTML = '<img class="clogo" src="' + esc(u) + '" alt="">'; msg("Logo uploaded. Click Save to keep it.");
+      }).catch(function (er) { msg(er.message, true); }).then(function () { $("saveBtn").disabled = false; input.value = ""; });
+    };
+    $("logoRemove").onclick = function () { logoField.value = ""; $("logoPrev").innerHTML = '<span class="help">No logo. A badge with the initials will be shown.</span>'; };
     $("cf").onsubmit = function (e) {
       e.preventDefault();
       var d = new FormData($("cf")), co = parseCoords(d.get("coords"));
       if (!co) { msg("Coordinates look wrong. Use the format: 3.1570, 101.7120", true); return; }
       if (outsideMalaysia(co) && !confirm("These coordinates are outside Malaysia. Save anyway?")) return;
-      var body = { id: d.get("id"), grp: d.get("grp"), name_en: d.get("name_en").trim(), name_ar: d.get("name_ar").trim(), lat: co.lat, lng: co.lng, sort: Number(d.get("sort")) };
+      var body = { id: d.get("id"), grp: d.get("grp"), name_en: d.get("name_en").trim(), name_ar: d.get("name_ar").trim(), lat: co.lat, lng: co.lng, sort: Number(d.get("sort")), logo_url: d.get("logo_url") || null };
       var req = isNew ? api("/rest/v1/centers", { method: "POST", body: body, write: true }) : api("/rest/v1/centers?id=eq." + encodeURIComponent(c.id), { method: "PATCH", body: body, write: true });
       $("saveBtn").disabled = true;
       req.then(function () { closeDlg(); msg("Saved."); return loadAll(); }).catch(function (er) { msg(er.message, true); $("saveBtn").disabled = false; });

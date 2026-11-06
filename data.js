@@ -16,23 +16,29 @@ window.QAREEB_CONFIG = {
 //                  the part of KL where their center is.
 // To ADD a center: copy one line, give it a new id, name and lat/lng.
 window.CAMPUSES = [
-  // --- Centers (positions are area-level estimates until exact addresses are added) ---
-  { id: "excel",     group: "center", name: { en: "Excel Language Centre (KL)",        ar: "إكسل لانجويج سنتر (كوالالمبور)" },     lat: 3.1570, lng: 101.7120 },
-  { id: "britannia", group: "center", name: { en: "Britannia Language Centre",         ar: "بريتانيا لانجويج سنتر" },              lat: 3.1490, lng: 101.7140 },
-  { id: "ems",       group: "center", name: { en: "EMS Language Centre",               ar: "إي إم إس لانجويج سنتر" },              lat: 3.1600, lng: 101.7230 },
-  { id: "cambright", group: "center", name: { en: "Cambright (Wisma MCA, Jalan Ampang)", ar: "كامبرايت (ويسما إم سي إيه، جالان أمبانغ)" }, lat: 3.1600, lng: 101.7215 },
+  { id: "excel", group: "center", name: { en: "Excel Language Centre (KL)", ar: "إكسل لانجويج سنتر (كوالالمبور)" }, lat: 3.157, lng: 101.712 },
+  { id: "britannia", group: "center", name: { en: "Britannia Language Centre (Genesis Tower)", ar: "بريتانيا لانجويج سنتر (جينيسيس تاور)" }, lat: 3.1483, lng: 101.71073 },
+  { id: "ems", group: "center", name: { en: "EMS Language Centre (Megan Avenue 2)", ar: "إي إم إس لانجويج سنتر (ميغان أفينيو 2)" }, lat: 3.16258, lng: 101.71221 },
+  { id: "cambright", group: "center", name: { en: "Cambright (Wisma MCA, Jalan Ampang)", ar: "كامبرايت (ويسما إم سي إيه، جالان أمبانغ)" }, lat: 3.15976, lng: 101.71675 },
   { id: "stratford", group: "center", name: { en: "Stratford International Language Centre", ar: "ستراتفورد الدولي لتعليم اللغة" }, lat: 3.1575, lng: 101.7145 },
-  { id: "els",       group: "center", name: { en: "ELS Language Centres (KL City Centre)", ar: "إي إل إس (وسط كوالالمبور)" },       lat: 3.1500, lng: 101.7105 },
-  { id: "elc",       group: "center", name: { en: "English Language Company (Jalan Raja Chulan)", ar: "إنجلش لانجويج كومباني (جالان راجا تشولان)" }, lat: 3.1505, lng: 101.7090 },
-  { id: "apu",       group: "center", name: { en: "APU English Language Centre (Bukit Jalil)", ar: "مركز اللغة الإنجليزية APU (بوكيت جليل)" }, lat: 3.0555, lng: 101.7005 },
+  { id: "els", group: "center", name: { en: "ELS Language Centres (Wisma HB, Megan Avenue 2)", ar: "إي إل إس (ويسما إتش بي، ميغان أفينيو 2)" }, lat: 3.16258, lng: 101.71221 },
+  { id: "elc", group: "center", name: { en: "English Language Company (Jalan Raja Chulan)", ar: "إنجلش لانجويج كومباني (جالان راجا تشولان)" }, lat: 3.1505, lng: 101.709 },
+  { id: "apu", group: "center", name: { en: "APU English Language Centre (Bukit Jalil)", ar: "مركز اللغة الإنجليزية APU (بوكيت جليل)" }, lat: 3.0555, lng: 101.7005 },
   { id: "british-council", group: "center", name: { en: "British Council (Jalan Ampang)", ar: "المجلس الثقافي البريطاني (جالان أمبانغ)" }, lat: 3.15964, lng: 101.70879 },
-  // --- Areas (my center is not listed) ---
-  { id: "a-klcc",    group: "area", name: { en: "KLCC area",         ar: "منطقة KLCC" },             lat: 3.1579, lng: 101.7116 },
-  { id: "a-bb",      group: "area", name: { en: "Bukit Bintang area", ar: "منطقة بوكيت بينتانج" },   lat: 3.1466, lng: 101.7108 },
-  { id: "a-ampang",  group: "area", name: { en: "Ampang area",       ar: "منطقة أمبانغ" },           lat: 3.1597, lng: 101.7585 },
-  { id: "a-cheras",  group: "area", name: { en: "Cheras area",       ar: "منطقة تشيراس" },           lat: 3.0900, lng: 101.7400 },
-  { id: "a-bangsar", group: "area", name: { en: "Bangsar area",      ar: "منطقة بانغسار" },          lat: 3.1290, lng: 101.6780 },
-  { id: "a-jalil",   group: "area", name: { en: "Bukit Jalil area",  ar: "منطقة بوكيت جليل" },       lat: 3.0560, lng: 101.7000 },
+  { id: "language-house", group: "center", name: { en: "The Language House (Megan Avenue 1)", ar: "ذا لانجويج هاوس (ميغان أفينيو 1)" }, lat: 3.1624, lng: 101.71721 },
+  { id: "prince", group: "center", name: { en: "Prince Language Centre (Megan Avenue 1)", ar: "برينس لانجويج سنتر (ميغان أفينيو 1)" }, lat: 3.1624, lng: 101.71721 },
+  { id: "elec", group: "center", name: { en: "ELEC Language Center (Megan Avenue 2)", ar: "إيليك لانجويج سنتر (ميغان أفينيو 2)" }, lat: 3.16258, lng: 101.71221 },
+  { id: "interlink", group: "center", name: { en: "Inter-Link Language Centre (Megan Avenue 2)", ar: "إنتر لينك لانجويج سنتر (ميغان أفينيو 2)" }, lat: 3.16258, lng: 101.71221 },
+  { id: "bright", group: "center", name: { en: "Bright Language Center (Megan Avenue 2)", ar: "برايت لانجويج سنتر (ميغان أفينيو 2)" }, lat: 3.16258, lng: 101.71221 },
+  { id: "vision", group: "center", name: { en: "Vision International Academy (Megan Avenue 2)", ar: "فيجن إنترناشيونال أكاديمي (ميغان أفينيو 2)" }, lat: 3.16258, lng: 101.71221 },
+  { id: "megan-1", group: "area", name: { en: "Megan Avenue 1 (Jalan Tun Razak)", ar: "ميغان أفينيو 1 (جالان تون رزاق)" }, lat: 3.1624, lng: 101.71721 },
+  { id: "megan-2", group: "area", name: { en: "Megan Avenue 2 (Jalan Yap Kwan Seng)", ar: "ميغان أفينيو 2 (جالان ياب كوان سينغ)" }, lat: 3.16258, lng: 101.71221 },
+  { id: "a-klcc", group: "area", name: { en: "KLCC area", ar: "منطقة KLCC" }, lat: 3.1579, lng: 101.7116 },
+  { id: "a-bb", group: "area", name: { en: "Bukit Bintang area", ar: "منطقة بوكيت بينتانج" }, lat: 3.1466, lng: 101.7108 },
+  { id: "a-ampang", group: "area", name: { en: "Ampang area", ar: "منطقة أمبانغ" }, lat: 3.1597, lng: 101.7585 },
+  { id: "a-cheras", group: "area", name: { en: "Cheras area", ar: "منطقة تشيراس" }, lat: 3.09, lng: 101.74 },
+  { id: "a-bangsar", group: "area", name: { en: "Bangsar area", ar: "منطقة بانغسار" }, lat: 3.129, lng: 101.678 },
+  { id: "a-jalil", group: "area", name: { en: "Bukit Jalil area", ar: "منطقة بوكيت جليل" }, lat: 3.056, lng: 101.7 },
 ];
 
 // Status: "available" | "reserved" | "taken"

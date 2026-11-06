@@ -126,3 +126,10 @@ input[type=search]{width:100%;padding:13px 14px;border-radius:10px;border:0;font
 /* minimum stay stands out: it decides whether a short-stay student can take the room */
 .stay{display:inline-block;margin:10px 0 2px;padding:6px 12px;border:1.5px solid var(--cta);border-radius:10px;background:#fff1e6;color:var(--cta);font-size:17px;font-weight:700}
 .tag.stay-tag{background:#fff1e6;color:var(--cta);border:1.5px solid var(--cta);font-size:15px;font-weight:700}
+
+/* center logos / badges */
+.row{display:flex;gap:10px;align-items:center}
+.clogo,.cbadge{width:32px;height:32px;flex:0 0 32px;border-radius:8px}
+.clogo{object-fit:contain;background:#fff;border:1px solid var(--line);padding:2px}
+.cbadge{display:grid;place-items:center;color:#fff;font-weight:700;font-size:12px;letter-spacing:.3px}
+.chosen .row b{font-size:16px}

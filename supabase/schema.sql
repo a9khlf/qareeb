@@ -85,6 +85,15 @@ create policy "public can send a request"
 -- No insert/update/delete policies exist for centers or listings, so only you
 -- (logged in to the dashboard) can add or edit rooms.
 
+-- Table permissions for the website roles. Row Level Security above still
+-- decides WHICH rows; these grants only allow the kind of action at all.
+-- (Needed if "Automatically expose new tables" is switched off.)
+grant usage on schema public to anon, authenticated;
+grant select on public.centers  to anon, authenticated;
+grant select on public.listings to anon, authenticated;
+grant insert on public.requests to anon, authenticated;
+grant usage, select on sequence public.requests_id_seq to anon, authenticated;
+
 -- 3) SAMPLE DATA (delete later from the Table Editor) -------
 
 insert into public.centers (id, grp, name_en, name_ar, lat, lng, sort) values

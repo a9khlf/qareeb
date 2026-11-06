@@ -1,6 +1,8 @@
 (function () {
   "use strict";
-  var CFG = window.QAREEB_CONFIG, CAMPUSES = window.CAMPUSES, LISTINGS = window.LISTINGS;
+  var CFG = window.QAREEB_CONFIG, SB = window.QAREEB_SUPABASE, CAMPUSES = window.CAMPUSES;
+  // With Supabase configured, rooms come ONLY from the database (never show sample rooms on the live site).
+  var LISTINGS = SB && SB.url ? [] : window.LISTINGS, loadFailed = false;
 
   var T = {
     en: {
@@ -18,6 +20,9 @@
       beds: "bedroom(s)", results: "rooms", request: "I want this room", notAvail: "Not available now",
       fromCampus: "From your language center", directions: "Open walking route in Google Maps", video: "Watch video",
       msg: "Hello Qareeb, I am interested in this accommodation: ",
+      reqName: "Your name", reqPhone: "Your WhatsApp number (with country code)",
+      reqNote: "One tap: WhatsApp opens with a ready message about this room.",
+      loadErr: "Could not load the rooms. Please check your internet and refresh the page.",
       verified: "Verified", onlyVerified: "Verified only", trustTitle: "Trust and lifestyle",
       vVideo: "Live video tour done", vOwner: "Owner identity checked", vVisit: "Visited by Qareeb team",
       notYet: "Not yet checked", mosque: "Nearest mosque", halalFood: "Halal food", arabicHost: "Arabic-speaking owner or tenants",
@@ -43,6 +48,9 @@
       beds: "غرفة نوم", results: "نتيجة", request: "أريد هذه الغرفة", notAvail: "غير متاح حالياً",
       fromCampus: "من مركز اللغة", directions: "افتح طريق المشي في خرائط جوجل", video: "شاهد الفيديو",
       msg: "مرحباً قريب، أنا مهتم بهذا السكن: ",
+      reqName: "اسمك", reqPhone: "رقم واتساب الخاص بك (مع رمز الدولة)",
+      reqNote: "بنقرة واحدة: يفتح واتساب مع رسالة جاهزة عن هذه الغرفة.",
+      loadErr: "تعذّر تحميل الغرف. تحقق من الإنترنت وأعد تحميل الصفحة.",
       verified: "موثّق", onlyVerified: "الموثّق فقط", trustTitle: "الثقة ونمط الحياة",
       vVideo: "تمت جولة فيديو مباشرة", vOwner: "تم التحقق من هوية المالك", vVisit: "زاره فريق قريب",
       notYet: "لم يتم بعد", mosque: "أقرب مسجد", halalFood: "طعام حلال", arabicHost: "المالك أو السكان يتحدثون العربية",
@@ -87,7 +95,7 @@
       '<li style="margin:4px 0">🗣️ ' + t("arabicHost") + ": " + (x.arabic ? "<b>" + t("yes") + "</b>" : t("unknown")) + "</li></ul></div>";
   }
   function safeHtml() {
-    return '<div class="dist safe"><b>🛡️' + t("safeTitle") + '</b><ul style="margin:8px 0 0;padding-inline-start:20px"><li>' +
+    return '<div class="dist safe"><b>🛡️ ' + t("safeTitle") + '</b><ul style="margin:8px 0 0;padding-inline-start:20px"><li>' +
       [t("safe1"), t("safe2"), t("safe3"), t("safe4")].join("</li><li>") + '</li></ul><p style="margin:8px 0 0"><b>' + t("safe5") + "</b></p></div>";
   }
 
@@ -115,7 +123,8 @@
   function render() {
     var list = filtered(), g = $("grid");
     $("count").textContent = list.length + " " + t("results");
-    $("empty").hidden = list.length > 0;
+    $("empty").textContent = loadFailed ? t("loadErr") : t("empty");
+    $("empty").hidden = list.length > 0 && !loadFailed;
     g.innerHTML = list.map(function (x) {
       var l = x.l;
       return '<article class="card ' + (l.status === "taken" ? "dim" : "") + '" data-id="' + l.id + '">' +
@@ -159,8 +168,13 @@
       '<div class="dist">' + t("fromCampus") + ': <select id="dCampus">' + opts + '</select><div style="margin-top:8px" id="dTrip"><b>' + tripText(tr) + "</b></div>" +
       '<a href="' + gm + '" target="_blank" rel="noopener" style="font-size:14px">' + t("directions") + "</a></div>" +
       trustHtml(l) + '<div id="dmap" class="dmap"></div>' + safeHtml() +
-      '<a class="btn wa ' + (ok ? "" : "off") + '" target="_blank" rel="noopener" href="' + waLink(t("msg") + pick(l.title) + " (#" + l.id + ", RM " + l.price + ")") + '">' + (ok ? "💬 " + t("request") : t("notAvail")) + "</a></div>";
+      (ok ? '<div class="req"><button id="askBtn" class="btn wa" type="button">💬 ' + t("request") + '</button><p class="note">' + t("reqNote") + "</p></div>"
+        : '<span class="btn wa off">' + t("notAvail") + "</span>") + "</div>";
     $("modal").hidden = false; document.body.style.overflow = "hidden";
+    if ($("askBtn")) $("askBtn").onclick = function () {
+      sendRequest(l);   // counts the interest in the background
+      window.open(waLink(t("msg") + l.title.en.replace(/&amp;/g, "&") + " (#" + l.id + ", RM " + l.price + ", " + pick(campus.name).replace(/&amp;/g, "&") + ")"), "_blank", "noopener");
+    };
     $("dCampus").onchange = function () {
       campus = CAMPUSES.filter(function (c) { return c.id === this.value; }.bind(this))[0]; $("campus").value = campus.id; render(); openDetail(id);
     };
@@ -196,6 +210,42 @@
     }
   }
 
+  // ---- Supabase (public "publishable" key only; Row Level Security protects the data) ----
+  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+  function safeUrl(u) { return /^https?:\/\//.test(u || "") ? esc(String(u).replace(/'/g, "%27")) : null; }
+  function sbGet(path) {
+    return fetch(SB.url + "/rest/v1/" + path, { headers: { apikey: SB.key } }).then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); });
+  }
+  // One-tap request: no personal data is typed here. The student's real contact reaches you
+  // through WhatsApp; this row just records that someone asked about this room.
+  function sendRequest(l) {
+    if (!SB || !SB.url) return;
+    fetch(SB.url + "/rest/v1/requests", {
+      method: "POST", keepalive: true,
+      headers: { apikey: SB.key, "Content-Type": "application/json", Prefer: "return=minimal" },
+      body: JSON.stringify({ listing_id: l.id, name: "Quick request", whatsapp: "via WhatsApp", center: campus.id })
+    }).catch(function (e) { console.warn("Could not save request", e); });
+  }
+  var HEX = /^#[0-9a-fA-F]{6}$/;
+  function mapListing(r) {
+    var cols = (r.colors || []).filter(function (c) { return HEX.test(c); }); if (cols.length < 2) cols = ["#1f6f78", "#5aa9a8"];
+    return {
+      id: r.id, type: r.type, area: esc(r.area), price: r.price, status: r.status, lat: r.lat, lng: r.lng, beds: r.beds,
+      furnished: r.furnished, bills: r.bills, minStay: r.min_stay, gender: r.gender,
+      title: { en: esc(r.title_en), ar: esc(r.title_ar) }, desc: { en: esc(r.desc_en), ar: esc(r.desc_ar) },
+      photos: (r.photos || []).map(safeUrl).filter(Boolean), video: safeUrl(r.video) || "", colors: cols,
+      trust: { video: r.v_video, owner: r.v_owner, visited: r.v_visited, mosque: r.mosque_min, halal: r.halal_min, arabic: r.arabic }
+    };
+  }
+  function load() {
+    if (!SB || !SB.url) return Promise.resolve();
+    return Promise.all([sbGet("centers?select=*&order=sort"), sbGet("listings?select=*&order=id")]).then(function (res) {
+      if (res[0].length) CAMPUSES = res[0].map(function (c) { return { id: c.id, group: c.grp, name: { en: esc(c.name_en), ar: esc(c.name_ar) }, lat: c.lat, lng: c.lng }; });
+      campus = CAMPUSES[0];
+      LISTINGS = res[1].map(mapListing);
+    }).catch(function (e) { console.warn("Could not load from Supabase", e); loadFailed = true; });
+  }
+
   $("langBtn").onclick = function () { lang = lang === "ar" ? "en" : "ar"; try { localStorage.setItem("qareeb-lang", lang); } catch (e) {} applyLang(); };
   $("campus").onchange = function () { campus = CAMPUSES.filter(function (c) { return c.id === $("campus").value; })[0]; render(); };
   ["area", "type", "price", "stay", "sort", "onlyAvail", "onlyVerified"].forEach(function (id) { $(id).onchange = render; });
@@ -205,5 +255,5 @@
   $("modal").onclick = function (e) { if (e.target === $("modal")) closeDetail(); };
   document.addEventListener("keydown", function (e) { if (e.key === "Escape") closeDetail(); });
 
-  applyLang();
+  load().then(applyLang);
 })();

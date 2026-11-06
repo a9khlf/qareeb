@@ -3,28 +3,44 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0f5c70">
 <title>Qareeb | Trusted Student Rooms Near Your Language Center in Kuala Lumpur</title>
-<meta name="description" content="Find a room, studio or apartment near your English language center in Kuala Lumpur and Ampang. Compare verified listings, walking times, and distance to the nearest mosque and halal food.">
+<meta name="description" content="Find a room, studio or apartment within walking distance of your English language center in Kuala Lumpur and Ampang. Compare verified listings, nearby metro and bus, and distance to the nearest mosque and halal food.">
+<link rel="icon" type="image/svg+xml" href="logo.svg">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 <header class="top">
   <div class="wrap bar">
-    <a class="logo" href="./"><span class="logo-mark">Q</span><span>Qareeb <small>قريب</small></span></a>
+    <a class="logo" href="./"><img class="logo-img" src="logo.svg" alt="" width="38" height="38"><span>Qareeb <small>قريب</small></span></a>
     <button id="langBtn" class="lang" type="button">العربية</button>
   </div>
 </header>
 
 <section class="hero">
   <div class="wrap">
-    <h1 data-i18n="heroTitle">Find a trusted room near your language center</h1>
-    <p data-i18n="heroSub">Compare rooms, see what has been verified, and know your walking time before you pay.</p>
+    <h1 data-i18n="heroTitle">Find a trusted room within walking distance of your language center</h1>
+    <p data-i18n="heroSub">Type your center, see the closest rooms first, and know what has been verified before you pay.</p>
 
     <div class="search">
+      <div class="wide">
+        <span class="lbl" id="campusLbl" data-i18n="fCampus">My language center</span>
+        <div class="combo" id="combo">
+          <input id="campusInput" type="search" autocomplete="off" spellcheck="false" role="combobox" aria-labelledby="campusLbl" aria-expanded="false" aria-controls="campusList" aria-autocomplete="list" data-i18n-ph="campusPh" placeholder="Type your language center, for example Britannia">
+          <ul id="campusList" class="combo-list" role="listbox" hidden></ul>
+        </div>
+        <div id="campusChosen" class="chosen" hidden></div>
+      </div>
       <label>
-        <span data-i18n="fCampus">My language center</span>
-        <select id="campus"></select>
+        <span data-i18n="fWalk">Walking distance to my center</span>
+        <select id="walkMax">
+          <option value="" data-i18n="walkAny">Any distance</option>
+          <option value="10" data-i18n="walk10">Up to 10 min</option>
+          <option value="15" data-i18n="walk15">Up to 15 min</option>
+          <option value="20" data-i18n="walk20">Up to 20 min</option>
+          <option value="30" data-i18n="walk30">Up to 30 min</option>
+        </select>
       </label>
       <label>
         <span data-i18n="fArea">Area</span>
@@ -105,9 +121,22 @@
   </div>
 </div>
 
+<div id="pinModal" class="modal" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="pinTitle">
+    <button id="pinClose" class="x" type="button" aria-label="Close">✕</button>
+    <div class="d">
+      <h2 id="pinTitle" data-i18n="pinTitle">Show us where your language center is</h2>
+      <p data-i18n="pinHelp">Tap the map where your center is. We will show the closest rooms to that spot.</p>
+      <div id="pinMap" class="dmap" style="height:340px"></div>
+      <div class="req"><button id="pinUse" class="btn" type="button" disabled data-i18n="pinUse">Use this location</button></div>
+    </div>
+  </div>
+</div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="config.js"></script>
 <script src="data.js"></script>
+<script src="amenities.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

@@ -176,6 +176,57 @@
   function chk(name, label, val) { return '<label class="chk"><input type="checkbox" name="' + name + '"' + (val ? " checked" : "") + "> " + label + "</label>"; }
   function num(v) { return v === "" || v == null ? null : Number(v); }
 
+  function amenityChecks(selected) {
+    return (window.QAREEB_AMENITIES || []).map(function (a) {
+      return '<label class="chk"><input type="checkbox" name="amen" value="' + a.key + '"' + (selected.indexOf(a.key) >= 0 ? " checked" : "") + "> " + a.icon + " " + a.en + "</label>";
+    }).join("");
+  }
+
+  // ---- nearby stations from free map data (OpenStreetMap). Tries two servers; if both are busy you type it yourself. ----
+  var MIRRORS = ["https://overpass.kumi.systems/api/interpreter", "https://overpass-api.de/api/interpreter"];
+  function overpass(q) {
+    var i = 0;
+    function next() {
+      if (i >= MIRRORS.length) return Promise.reject(new Error("The map service is busy right now. Please type the details yourself, or try again in a minute."));
+      var ctl = new AbortController(), to = setTimeout(function () { ctl.abort(); }, 9000);
+      return fetch(MIRRORS[i++], { method: "POST", body: "data=" + encodeURIComponent(q), headers: { "Content-Type": "application/x-www-form-urlencoded" }, signal: ctl.signal })
+        .then(function (r) { clearTimeout(to); if (!r.ok) throw new Error("bad"); return r.json(); })
+        .catch(function () { clearTimeout(to); return next(); });
+    }
+    return next();
+  }
+  function walkMin(a, b, c, d) {
+    var R = 6371, rad = Math.PI / 180, dLat = (c - a) * rad, dLng = (d - b) * rad;
+    var h = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(a * rad) * Math.cos(c * rad) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+    return Math.round(2 * R * Math.asin(Math.sqrt(h)) * 1.3 * 1000 / 80);
+  }
+  function stationType(tags) {
+    if (tags.monorail === "yes" || tags.station === "monorail") return "Monorail";
+    if (tags.light_rail === "yes" || tags.station === "light_rail") return "LRT";
+    if (tags.subway === "yes" || tags.station === "subway") return "MRT";
+    if (tags.train === "yes") return "KTM";
+    return "Other";
+  }
+  function findTransit() {
+    var co = parseCoords($("f-co").value), help = $("transitHelp");
+    if (!co) { help.textContent = "Fill in the coordinates first (Location section)."; return; }
+    help.textContent = "Searching the map...";
+    var q = "[out:json][timeout:25];(node(around:1500," + co.lat + "," + co.lng + ')["railway"="station"];node(around:700,' + co.lat + "," + co.lng + ')["highway"="bus_stop"];);out body 120;';
+    overpass(q).then(function (j) {
+      var st = null, bus = null;
+      j.elements.forEach(function (e) {
+        var m = walkMin(co.lat, co.lng, e.lat, e.lon);
+        if (e.tags.railway === "station") { if (!st || m < st.m) st = { m: m, name: e.tags.name || "", type: stationType(e.tags) }; }
+        else if (e.tags.highway === "bus_stop") { if (bus == null || m < bus) bus = m; }
+      });
+      var out = [];
+      if (st) { $("f-sn").value = st.name; $("f-sm").value = st.m; document.querySelector('#rf select[name="station_type"]').value = st.type; out.push("Nearest station: " + (st.name || "unnamed") + " (" + st.type + "), about " + st.m + " min walk"); }
+      else out.push("No station found within about 1.5 km");
+      if (bus != null) { $("f-bm").value = bus; out.push("nearest bus stop about " + bus + " min walk"); }
+      help.textContent = out.join("; ") + ". Please check it, then save.";
+    }).catch(function (e) { help.textContent = e.message; });
+  }
+
   var photoList = [];
   function drawThumbs() {
     $("thumbs").innerHTML = photoList.map(function (u, i) {
@@ -207,6 +258,13 @@
       '<fieldset><legend>Photos and video</legend><div id="thumbs" class="thumbs"></div>' +
       '<div class="fld"><label for="f-ph">Add photos</label><input id="f-ph" type="file" accept="image/*" multiple><p class="help">Photos are resized automatically. The first photo is the cover.</p></div>' +
       '<div class="fld"><label for="f-vu">Video link</label><input id="f-vu" name="video" type="url" value="' + esc(r.video) + '" placeholder="https://..."><p class="help">Or upload an MP4 / WebM file (up to 50 MB):</p><input id="f-vf" type="file" accept="video/mp4,video/webm"></div></fieldset>' +
+      '<fieldset><legend>Getting around and advantages</legend>' +
+      '<div class="row2"><div class="fld"><label for="f-sn">Nearest station (name)</label><input id="f-sn" name="station_name" maxlength="80" value="' + esc(r.station_name || "") + '" placeholder="e.g. Ampang Park"></div>' +
+      '<div class="fld"><span>Station type</span>' + sel("station_type", [["", "-"], ["MRT", "MRT"], ["LRT", "LRT"], ["Monorail", "Monorail"], ["KTM", "KTM"], ["BRT", "BRT"], ["Other", "Other"]], r.station_type || "") + "</div>" +
+      '<div class="fld"><label for="f-sm">Walking minutes to station</label><input id="f-sm" name="station_min" type="number" min="0" max="120" value="' + esc(r.station_min == null ? "" : r.station_min) + '"></div>' +
+      '<div class="fld"><label for="f-bm">Walking minutes to nearest bus stop</label><input id="f-bm" name="bus_min" type="number" min="0" max="120" value="' + esc(r.bus_min == null ? "" : r.bus_min) + '"></div></div>' +
+      '<button type="button" class="btn sec sm" id="findTransit">Find nearby stations automatically</button><p class="help" id="transitHelp">Uses free map data and the coordinates above. Always check the result before saving.</p>' +
+      '<div style="margin-top:12px"><span style="font-size:13px;font-weight:600">Advantages (tick what applies)</span><div class="row2" style="margin-top:6px">' + amenityChecks(r.amenities || []) + "</div></div></fieldset>" +
       '<fieldset><legend>Verification (tick only what you really checked)</legend>' +
       chk("v_video", "Live video tour completed", r.v_video) + chk("v_owner", "Owner identity checked", r.v_owner) + chk("v_visited", "Visited in person by the Qareeb team", r.v_visited) +
       '<div class="row2"><div class="fld"><label for="f-mo">Walking minutes to nearest mosque</label><input id="f-mo" name="mosque_min" type="number" min="0" max="120" value="' + esc(r.mosque_min == null ? "" : r.mosque_min) + '"></div>' +
@@ -224,6 +282,7 @@
     };
     $("f-ph").onchange = function () { uploadPhotos(this); };
     $("f-vf").onchange = function () { uploadVideo(this); };
+    $("findTransit").onclick = findTransit;
     $("rf").onsubmit = function (e) { e.preventDefault(); saveRoom(r, isNew); };
   }
 
@@ -275,7 +334,9 @@
       title_en: d.get("title_en").trim(), title_ar: d.get("title_ar").trim(), desc_en: d.get("desc_en").trim(), desc_ar: d.get("desc_ar").trim(),
       lat: co.lat, lng: co.lng, photos: photoList, video: (d.get("video") || "").trim(),
       v_video: f.v_video.checked, v_owner: f.v_owner.checked, v_visited: f.v_visited.checked,
-      mosque_min: num(d.get("mosque_min")), halal_min: num(d.get("halal_min")), arabic: f.arabic.checked, published: f.published.checked
+      mosque_min: num(d.get("mosque_min")), halal_min: num(d.get("halal_min")), arabic: f.arabic.checked, published: f.published.checked,
+      station_name: (d.get("station_name") || "").trim() || null, station_type: d.get("station_type") || null,
+      station_min: num(d.get("station_min")), bus_min: num(d.get("bus_min")), amenities: d.getAll("amen")
     };
     var req = isNew ? api("/rest/v1/listings", { method: "POST", body: body, write: true }) : api("/rest/v1/listings?id=eq." + old.id, { method: "PATCH", body: body, write: true });
     $("saveBtn").disabled = true;

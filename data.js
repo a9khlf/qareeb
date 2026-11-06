@@ -18,7 +18,6 @@ window.QAREEB_CONFIG = {
 window.CAMPUSES = [
   // --- Centers (positions are area-level estimates until exact addresses are added) ---
   { id: "excel",     group: "center", name: { en: "Excel Language Centre (KL)",        ar: "إكسل لانجويج سنتر (كوالالمبور)" },     lat: 3.1570, lng: 101.7120 },
-  { id: "excel-sk",  group: "center", name: { en: "Excel Language Centre (Seri Kembangan)", ar: "إكسل لانجويج سنتر (سيري كيمبانغان)" }, lat: 3.0250, lng: 101.7060 },
   { id: "britannia", group: "center", name: { en: "Britannia Language Centre",         ar: "بريتانيا لانجويج سنتر" },              lat: 3.1490, lng: 101.7140 },
   { id: "ems",       group: "center", name: { en: "EMS Language Centre",               ar: "إي إم إس لانجويج سنتر" },              lat: 3.1600, lng: 101.7230 },
   { id: "cambright", group: "center", name: { en: "Cambright (Wisma MCA, Jalan Ampang)", ar: "كامبرايت (ويسما إم سي إيه، جالان أمبانغ)" }, lat: 3.1600, lng: 101.7215 },
@@ -26,6 +25,7 @@ window.CAMPUSES = [
   { id: "els",       group: "center", name: { en: "ELS Language Centres (KL City Centre)", ar: "إي إل إس (وسط كوالالمبور)" },       lat: 3.1500, lng: 101.7105 },
   { id: "elc",       group: "center", name: { en: "English Language Company (Jalan Raja Chulan)", ar: "إنجلش لانجويج كومباني (جالان راجا تشولان)" }, lat: 3.1505, lng: 101.7090 },
   { id: "apu",       group: "center", name: { en: "APU English Language Centre (Bukit Jalil)", ar: "مركز اللغة الإنجليزية APU (بوكيت جليل)" }, lat: 3.0555, lng: 101.7005 },
+  { id: "british-council", group: "center", name: { en: "British Council (Jalan Ampang)", ar: "المجلس الثقافي البريطاني (جالان أمبانغ)" }, lat: 3.15964, lng: 101.70879 },
   // --- Areas (my center is not listed) ---
   { id: "a-klcc",    group: "area", name: { en: "KLCC area",         ar: "منطقة KLCC" },             lat: 3.1579, lng: 101.7116 },
   { id: "a-bb",      group: "area", name: { en: "Bukit Bintang area", ar: "منطقة بوكيت بينتانج" },   lat: 3.1466, lng: 101.7108 },

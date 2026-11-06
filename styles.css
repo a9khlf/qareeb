@@ -86,3 +86,33 @@ a{color:var(--brand)}
 .dist label{display:block;font-weight:600}
 .foot-note{margin-top:4px;font-size:13px}
 .card:focus-visible{outline:3px solid #c8892b;outline-offset:2px}
+
+/* logo */
+.logo-img{display:block;width:38px;height:38px}
+
+/* smart center search */
+.search .wide{grid-column:1/-1}
+.search .lbl{display:block;font-size:12px;opacity:.9;margin-bottom:4px}
+input[type=search]{width:100%;padding:13px 14px;border-radius:10px;border:0;font:inherit;background:#fff;color:var(--ink)}
+.combo{position:relative}
+.combo-list{position:absolute;z-index:30;inset-inline:0;top:100%;margin:6px 0 0;padding:6px;background:#fff;color:var(--ink);border:1px solid var(--line);border-radius:12px;box-shadow:0 14px 34px rgba(0,0,0,.2);max-height:340px;overflow:auto;list-style:none}
+.combo-list li{padding:10px;border-radius:8px;cursor:pointer}
+.combo-list li.on,.combo-list li:hover{background:var(--brand-soft)}
+.combo-list li.gh{font-size:12px;font-weight:700;color:var(--muted);cursor:default;padding:8px 10px 2px;background:none}
+.combo-list li.note{cursor:default;color:var(--muted);font-size:14px}
+.combo-list li.note:hover{background:none}
+.combo-list .sub{display:block;font-size:12.5px;color:var(--muted)}
+.chosen{display:flex;gap:6px 14px;flex-wrap:wrap;align-items:center;background:rgba(255,255,255,.14);padding:11px 14px;border-radius:10px}
+.chosen a{color:#fff}
+.linkbtn{background:none;border:0;color:#fff;text-decoration:underline;font:inherit;cursor:pointer;padding:0}
+.hint{grid-column:1/-1;margin:0;color:var(--muted)}
+.grp{grid-column:1/-1;margin:14px 0 0;font-size:19px}
+.grp small{display:block;font-weight:400;color:var(--muted);font-size:14px}
+.walk.near{background:#dff1e8;color:var(--ok)}
+.amen{margin:10px 0}
+.getting{background:var(--brand-soft)}
+.getting ul{list-style:none;padding:0;margin:8px 0 0}
+.getting li{margin:4px 0}
+
+/* direct WhatsApp button on each room card */
+.card .btn.wa{margin-top:12px;padding:11px;font-size:15px;cursor:pointer}

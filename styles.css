@@ -116,3 +116,13 @@ input[type=search]{width:100%;padding:13px 14px;border-radius:10px;border:0;font
 
 /* direct WhatsApp button on each room card */
 .card .btn.wa{margin-top:12px;padding:11px;font-size:15px;cursor:pointer}
+
+/* orange call-to-action (white text on #c2410c = 5.2:1) */
+:root{--cta:#c2410c;--cta-d:#9a3412}
+.btn.wa{background:var(--cta);font-size:18px;font-weight:700;padding:16px;border-radius:14px;box-shadow:0 6px 16px rgba(194,65,12,.28)}
+.btn.wa:hover{background:var(--cta-d)}
+.btn.wa.off{background:#6b787c;box-shadow:none}
+.card .btn.wa{margin-top:14px;padding:15px;font-size:18px}
+/* minimum stay stands out: it decides whether a short-stay student can take the room */
+.stay{display:inline-block;margin:10px 0 2px;padding:6px 12px;border:1.5px solid var(--cta);border-radius:10px;background:#fff1e6;color:var(--cta);font-size:17px;font-weight:700}
+.tag.stay-tag{background:#fff1e6;color:var(--cta);border:1.5px solid var(--cta);font-size:15px;font-weight:700}

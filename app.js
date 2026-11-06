@@ -11,7 +11,7 @@
   // ---------------------------------------------------------------
   var T = {
     en: {
-      heroTitle: "Find a trusted room within walking distance of your language center",
+      heroTitle: "Find a room within walking distance of your language center",
       heroSub: "Type your center, see the closest rooms first, and know what has been verified before you pay.",
       fCampus: "My language center", campusPh: "Type your language center, for example Britannia",
       fWalk: "Walking distance to my center", walkAny: "Any distance", walk10: "Up to 10 min", walk15: "Up to 15 min", walk20: "Up to 20 min", walk30: "Up to 30 min",
@@ -62,7 +62,7 @@
       safe5: "Scammed? Call Malaysia's National Scam Response Centre: 997"
     },
     ar: {
-      heroTitle: "ابحث عن سكن موثوق على مسافة مشي من مركز اللغة",
+      heroTitle: "ابحث عن سكن على مسافة مشي من مركز اللغة",
       heroSub: "اكتب اسم مركزك لتظهر لك أقرب الغرف أولاً، واعرف ما تم التحقق منه قبل أن تدفع.",
       fCampus: "مركز اللغة الذي أدرس فيه", campusPh: "اكتب اسم مركز اللغة، مثلاً: بريتانيا",
       fWalk: "مسافة المشي إلى مركزي", walkAny: "أي مسافة", walk10: "حتى ١٠ دقائق", walk15: "حتى ١٥ دقيقة", walk20: "حتى ٢٠ دقيقة", walk30: "حتى ٣٠ دقيقة",
@@ -222,7 +222,7 @@
       (x.tr ? '<span class="walk ' + (x.tr.walk <= 15 ? "near" : "") + '">' + tripText(x.tr) + "</span>" : "") +
       (isVerified(l) ? '<span class="walk gold">✔ ' + t("verified") + "</span>" : "") +
       transitLine(l) +
-      '<div class="meta" style="margin-top:8px">⏱ ' + t("minStayShort") + ": " + months(l.minStay) + "</div>" +
+      '<div class="stay">⏱ ' + t("minStayShort") + ": " + months(l.minStay) + "</div>" +
       '<div class="meta">🕌 ' + (l.trust.mosque == null ? "–" : walkText(l.trust.mosque)) + (l.trust.arabic ? " · 🗣️ " + t("arabicShort") : "") + "</div>" +
       '<div class="price">' + money(l.price) + " <small>" + t("perMonth") + "</small></div>" +
       (l.status === "available" ? '<button type="button" class="btn wa" data-wa="' + l.id + '">💬 ' + t("cardWa") + "</button>" : "") + "</div></article>";
@@ -278,7 +278,7 @@
       "<h2>" + pick(l.title) + "</h2>" +
       '<div class="price">' + money(l.price) + " <small>" + t("perMonth") + "</small></div>" +
       '<div class="tags"><span class="tag">' + t(l.type) + '</span><span class="tag">' + l.area + '</span><span class="tag">' + bedrooms(l.beds) +
-      '</span><span class="tag">⏱ ' + t("minStay") + ": " + months(l.minStay) + '</span><span class="tag">' + t(l.furnished ? "furnished" : "unfurnished") +
+      '</span><span class="tag stay-tag">⏱ ' + t("minStay") + ": " + months(l.minStay) + '</span><span class="tag">' + t(l.furnished ? "furnished" : "unfurnished") +
       '</span><span class="tag">' + t(l.bills ? "bills" : "noBills") + '</span><span class="tag">' + t("g_" + (l.gender || "mixed")) + "</span></div>" +
       "<p>" + pick(l.desc) + "</p>" + amenHtml(l) + dist + gettingHtml(l) +
       trustHtml(l) + '<div id="dmap" class="dmap"></div>' + safeHtml() +

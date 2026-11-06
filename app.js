@@ -319,7 +319,7 @@
       if (!toks.length) return c.group === "center";
       var hay = norm(plain(c.name.en) + " " + plain(c.name.ar));
       return toks.every(function (w) { return hay.indexOf(w) >= 0; });
-    }).slice(0, 8);
+    }).slice(0, 14);
   }
   function optLi(i, title, sub) {
     return '<li role="option" id="sg' + i + '" data-i="' + i + '"' + (i === sugIdx ? ' class="on" aria-selected="true"' : "") + ">" + title + (sub ? '<span class="sub">' + sub + "</span>" : "") + "</li>";

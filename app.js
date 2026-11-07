@@ -46,7 +46,7 @@
       request: "I want this room", cardWa: "Ask on WhatsApp", notAvail: "Not available at the moment",
       reqNote: "One tap: WhatsApp opens with a ready message about this room.",
       msg: "Hello, I am interested in this accommodation I found on Qareeb: ",
-      reserve: "Reserve now", resTitle: "Reserve this room",
+      reserve: "Reserve now", prevPhoto: "Previous photo", nextPhoto: "Next photo", resTitle: "Reserve this room",
       resIntro: "We will hold this room for you for 24 hours. We confirm on WhatsApp and send the deposit details.",
       resName: "Your name", resPhone: "Your WhatsApp number (with country code)", resSend: "Confirm reservation",
       resNote: "Your name and number are used only to contact you about this reservation.",
@@ -113,7 +113,7 @@
       request: "أريد هذه الغرفة", cardWa: "اسأل عبر واتساب", notAvail: "غير متاحة حالياً",
       reqNote: "بنقرة واحدة: يفتح واتساب برسالة جاهزة عن هذه الغرفة.",
       msg: "مرحباً، أنا مهتم بهذا السكن الذي وجدته على موقع قريب: ",
-      reserve: "احجز الآن", resTitle: "احجز هذه الغرفة",
+      reserve: "احجز الآن", prevPhoto: "الصورة السابقة", nextPhoto: "الصورة التالية", resTitle: "احجز هذه الغرفة",
       resIntro: "سنحتفظ لك بالغرفة لمدة ٢٤ ساعة، ونؤكد الحجز عبر واتساب ونرسل لك تفاصيل العربون.",
       resName: "اسمك", resPhone: "رقم واتساب الخاص بك (مع رمز الدولة)", resSend: "تأكيد الحجز",
       resNote: "نستخدم اسمك ورقمك فقط للتواصل معك بخصوص هذا الحجز.",
@@ -250,6 +250,33 @@
     return out;
   }
 
+  // ---- picture slider: arrows, dots, swipe (scroll-snap) and keyboard arrows ----
+  function slideCount(l) { return l.photos.length || 3; }
+  function trackHtml(l) {
+    if (l.photos.length) return '<div class="track">' + l.photos.map(function (p) { return '<div class="slide" style="background-image:url(\'' + p + '\')"></div>'; }).join("") + "</div>";
+    return '<div class="track">' + [0, 1, 2].map(function (i) { return '<div class="slide" style="background-image:linear-gradient(' + (135 + i * 40) + "deg," + l.colors[0] + "," + l.colors[1] + ')">🏠</div>'; }).join("") + "</div>";
+  }
+  function navHtml(l) {
+    var n = slideCount(l); if (n < 2) return "";
+    var dots = ""; for (var i = 0; i < n; i++) dots += i === 0 ? '<i class="on"></i>' : "<i></i>";
+    return '<button type="button" class="sl-btn prev" data-arrow="-1" aria-label="' + t("prevPhoto") + '"><span>‹</span></button><button type="button" class="sl-btn next" data-arrow="1" aria-label="' + t("nextPhoto") + '"><span>›</span></button><div class="sl-dots">' + dots + "</div>";
+  }
+  // dir: +1 = next picture, -1 = previous (Arabic pages scroll right-to-left, so the direction flips).
+  // physical = true: dir is a screen direction (keyboard arrows): +1 = right
+  function slideBy(el, dir, physical) {
+    var box = el.closest(".ph, .slider"), tr = box && box.querySelector(".track");
+    if (!tr) return;
+    var rtl = document.documentElement.dir === "rtl";
+    var px = physical ? dir : dir * (rtl ? -1 : 1);
+    tr.scrollBy({ left: px * tr.clientWidth, behavior: "smooth" });
+  }
+  document.addEventListener("scroll", function (e) {   // keep the dots in step with the picture shown
+    var tr = e.target; if (!tr || !tr.classList || !tr.classList.contains("track")) return;
+    var box = tr.closest(".ph, .slider"), dots = box && box.querySelectorAll(".sl-dots i"); if (!dots || !dots.length) return;
+    var idx = Math.round(Math.abs(tr.scrollLeft) / (tr.clientWidth || 1));
+    dots.forEach(function (d, i) { d.classList.toggle("on", i === idx); });
+  }, true);
+
   function card(x) {
     var l = x.l;
     var chips = (x.tr ? '<span class="walk ' + (x.tr.walk <= 15 ? "near" : "") + '">' + tripText(x.tr) + "</span>" : "") +
@@ -258,7 +285,7 @@
       ? '<button type="button" class="btn wa" data-res="' + l.id + '">⚡ ' + t("reserve") + '</button><button type="button" class="btn alt" data-wa="' + l.id + '">💬 ' + t("cardWa") + "</button>"
       : '<button type="button" class="btn wa" data-wa="' + l.id + '">💬 ' + t("cardWa") + "</button>";
     return '<article class="card ' + (l.status === "taken" ? "dim" : "") + '" data-id="' + l.id + '" tabindex="0">' +
-      '<div class="ph" style="' + photoStyle(l) + '"><span class="badge ' + l.status + '">' + t(l.status) + "</span>" + (l.photos.length ? "" : "🏠") + "</div>" +
+      '<div class="ph">' + trackHtml(l) + navHtml(l) + '<span class="badge ' + l.status + '">' + t(l.status) + "</span></div>" +
       '<div class="body"><h3>' + pick(l.title) + '</h3><div class="where">' + t(l.type) + " · " + l.area + "</div>" +
       (chips ? '<div class="chips">' + chips + "</div>" : "") +
       '<div class="stay">⏱ ' + t("minStayShort") + ": " + months(l.minStay) + "</div>" +
@@ -345,7 +372,7 @@
       ? '<div class="dist"><b>' + t("fromCampus") + ": " + pick(campus.name) + '</b><div style="margin-top:8px"><b>' + tripText(tr) + "</b></div>" +
         '<a href="https://www.google.com/maps/dir/?api=1&travelmode=walking&origin=' + campus.lat + "," + campus.lng + "&destination=" + l.lat + "," + l.lng + '" target="_blank" rel="noopener" style="font-size:14px">' + t("directions") + '</a><div class="small">' + t("distNote") + "</div></div>"
       : '<div class="dist">' + t("chooseCenter") + "</div>";
-    $("detail").innerHTML = '<div class="gallery">' + shots + "</div>" + vid +
+    $("detail").innerHTML = '<div class="slider det"><div class="gallery track">' + shots + "</div>" + navHtml(l) + "</div>" + vid +
       '<div class="d"><span class="badge ' + l.status + '" style="position:static;border:1px solid var(--line)">' + t(l.status) + "</span>" +
       "<h2>" + pick(l.title) + "</h2>" +
       '<div class="price">' + money(l.price) + " <small>" + t("perMonth") + "</small></div>" +
@@ -574,6 +601,8 @@
   ["walkMax", "area", "type", "price", "stay", "sort", "onlyAvail", "onlyVerified"].forEach(function (id) { $(id).onchange = render; });
   document.querySelectorAll(".vbtn").forEach(function (b) { b.onclick = function () { setView(b.dataset.view); }; });
   $("grid").onclick = function (e) {
+    var ar = e.target.closest("[data-arrow]");
+    if (ar) { e.stopPropagation(); slideBy(ar, +ar.dataset.arrow); return; }
     var rs = e.target.closest("[data-res]");
     if (rs) { e.stopPropagation(); var rl = roomById(+rs.dataset.res); if (rl) openReserve(rl); return; }
     var w = e.target.closest("[data-wa]");
@@ -581,7 +610,10 @@
     var c = e.target.closest(".card"); if (c) openDetail(+c.dataset.id);
   };
   $("grid").onkeydown = function (e) {
-    if (e.target.closest("[data-wa],[data-res]")) return;   // the buttons handle their own Enter/Space
+    if ((e.key === "ArrowLeft" || e.key === "ArrowRight") && e.target.closest(".card")) {   // keyboard arrows switch pictures
+      e.preventDefault(); slideBy(e.target.closest(".card").querySelector(".ph"), e.key === "ArrowRight" ? 1 : -1, true); return;
+    }
+    if (e.target.closest("[data-wa],[data-res],[data-arrow]")) return;   // the buttons handle their own Enter/Space
     if (e.key === "Enter" || e.key === " ") { var c = e.target.closest(".card"); if (c) { e.preventDefault(); openDetail(+c.dataset.id); } }
   };
   $("close").onclick = closeDetail;

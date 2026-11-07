@@ -166,3 +166,28 @@ input[type=search]{width:100%;padding:13px 14px;border-radius:10px;border:0;font
 .card .btn.alt:hover{background:#fff6ef;border-color:var(--cta)}
 .card.dim .ph{filter:saturate(.6)}
 @media(max-width:600px){.card .ph{height:176px}.card .body{padding:18px 18px 20px}}
+
+/* ===== Picture slider (room cards and room details) ===== */
+.ph{position:relative;display:block;overflow:hidden;background:none}
+.slider{position:relative}
+.track{display:flex;height:100%;overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x mandatory;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.track::-webkit-scrollbar{display:none}
+.slide{flex:0 0 100%;scroll-snap-align:center;height:100%;background-size:cover;background-position:center;display:grid;place-items:center;font-size:44px;color:rgba(255,255,255,.92)}
+.sl-btn{position:absolute;top:50%;transform:translateY(-50%);z-index:2;width:40px;height:40px;border-radius:50%;border:0;background:rgba(255,255,255,.94);color:var(--ink);font-size:28px;line-height:1;padding:0 0 4px;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.22);display:grid;place-items:center}
+.sl-btn:hover{background:#fff;transform:translateY(-50%) scale(1.06)}
+.sl-btn.prev{left:12px}
+.sl-btn.next{right:12px}
+.sl-dots{position:absolute;left:0;right:0;bottom:12px;z-index:2;display:flex;justify-content:center;gap:6px;pointer-events:none}
+.sl-dots i{display:block;width:8px;height:8px;border-radius:999px;background:rgba(255,255,255,.6);box-shadow:0 1px 3px rgba(0,0,0,.25);transition:width .2s,background .2s}
+.sl-dots i.on{width:20px;background:#fff}
+.card .ph .badge{z-index:3}
+.card .ph .slide{font-size:44px}
+.slider.det .gallery{height:auto}
+.slider.det .gallery>*{flex:0 0 100%;scroll-snap-align:center}
+@media(max-width:600px){.sl-btn{width:36px;height:36px;font-size:26px}}
+
+/* slider fixes: strip fills the card; arrows follow the reading direction */
+.card .ph .track{position:absolute;left:0;top:0;width:100%;height:100%}
+.sl-btn.prev{left:auto;inset-inline-start:12px}
+.sl-btn.next{right:auto;inset-inline-end:12px}
+[dir=rtl] .sl-btn span{display:inline-block;transform:scaleX(-1)}

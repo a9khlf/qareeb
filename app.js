@@ -46,6 +46,22 @@
       request: "I want this room", cardWa: "Ask on WhatsApp", notAvail: "Not available at the moment",
       reqNote: "One tap: WhatsApp opens with a ready message about this room.",
       msg: "Hello, I am interested in this accommodation I found on Qareeb: ",
+      reserve: "Reserve now", resTitle: "Reserve this room",
+      resIntro: "We will hold this room for you for 24 hours. We confirm on WhatsApp and send the deposit details.",
+      resName: "Your name", resPhone: "Your WhatsApp number (with country code)", resSend: "Confirm reservation",
+      resNote: "Your name and number are used only to contact you about this reservation.",
+      resNote2: "Reserving holds the room for 24 hours. You can also ask us anything on WhatsApp first.",
+      resDone: "Room reserved for 24 hours",
+      resDoneText: "Send us the WhatsApp message now so we can confirm your reservation and share the deposit details. If we do not hear from you, the room goes back on the list after 24 hours.",
+      resOpen: "Open WhatsApp", resTaken: "Sorry, this room was just reserved by someone else.",
+      resLimit: "You already have reservations on hold. Please contact us on WhatsApp.",
+      resError: "We could not complete the reservation. Please try again or ask us on WhatsApp.",
+      resBadPhone: "Please enter a valid WhatsApp number with the country code.",
+      msgReserve: "Hello, I reserved this room on Qareeb and would like to confirm it and receive the deposit details: ",
+      howTitle: "How reserving works",
+      how1: "Qareeb has checked this room: live video tour and owner identity.",
+      how2: "Reserving holds the room for you for 24 hours.",
+      how3: "We confirm on WhatsApp and send the deposit details. Pay only to the details we send you, and keep the receipt.",
       fromCampus: "Distance from your language center", distNote: "Walking times are estimates.",
       directions: "View the walking route in Google Maps",
       getting: "Getting around", nearestStation: "Nearest station", nearestBus: "Nearest bus stop", amenTitle: "Advantages",
@@ -97,6 +113,22 @@
       request: "أريد هذه الغرفة", cardWa: "اسأل عبر واتساب", notAvail: "غير متاحة حالياً",
       reqNote: "بنقرة واحدة: يفتح واتساب برسالة جاهزة عن هذه الغرفة.",
       msg: "مرحباً، أنا مهتم بهذا السكن الذي وجدته على موقع قريب: ",
+      reserve: "احجز الآن", resTitle: "احجز هذه الغرفة",
+      resIntro: "سنحتفظ لك بالغرفة لمدة ٢٤ ساعة، ونؤكد الحجز عبر واتساب ونرسل لك تفاصيل العربون.",
+      resName: "اسمك", resPhone: "رقم واتساب الخاص بك (مع رمز الدولة)", resSend: "تأكيد الحجز",
+      resNote: "نستخدم اسمك ورقمك فقط للتواصل معك بخصوص هذا الحجز.",
+      resNote2: "الحجز يحتفظ لك بالغرفة ٢٤ ساعة. ويمكنك أيضاً أن تسألنا عبر واتساب أولاً.",
+      resDone: "تم حجز الغرفة لمدة ٢٤ ساعة",
+      resDoneText: "أرسل لنا رسالة واتساب الآن لنؤكد حجزك ونرسل تفاصيل العربون. وإذا لم نسمع منك، تعود الغرفة إلى القائمة بعد ٢٤ ساعة.",
+      resOpen: "افتح واتساب", resTaken: "عذراً، تم حجز هذه الغرفة للتو من شخص آخر.",
+      resLimit: "لديك حجوزات قائمة بالفعل. يرجى التواصل معنا عبر واتساب.",
+      resError: "تعذّر إكمال الحجز. حاول مرة أخرى أو اسألنا عبر واتساب.",
+      resBadPhone: "أدخل رقم واتساب صحيحاً مع رمز الدولة.",
+      msgReserve: "مرحباً، حجزت هذه الغرفة على موقع قريب وأرغب في تأكيد الحجز واستلام تفاصيل العربون: ",
+      howTitle: "كيف يعمل الحجز",
+      how1: "تحقق فريق قريب من هذه الغرفة: جولة فيديو مباشرة وهوية المالك.",
+      how2: "الحجز يحتفظ لك بالغرفة لمدة ٢٤ ساعة.",
+      how3: "نؤكد عبر واتساب ونرسل تفاصيل العربون. ادفع فقط إلى التفاصيل التي نرسلها لك، واحتفظ بالإيصال.",
       fromCampus: "المسافة من مركز اللغة", distNote: "أوقات المشي تقديرية.",
       directions: "عرض طريق المشي في خرائط جوجل",
       getting: "المواصلات", nearestStation: "أقرب محطة", nearestBus: "أقرب موقف حافلات", amenTitle: "المزايا",
@@ -170,9 +202,13 @@
       '<li style="margin:4px 0">🍽️ ' + t("halalFood") + ": " + (x.halal == null ? t("unknown") : "<b>" + walkText(x.halal) + "</b>") + "</li>" +
       '<li style="margin:4px 0">🗣️ ' + t("arabicHost") + ": " + (x.arabic ? "<b>" + t("yes") + "</b>" : t("unknown")) + "</li></ul></div>";
   }
-  function safeHtml() {
-    return '<div class="dist safe"><b>🛡️ ' + t("safeTitle") + '</b><ul style="margin:8px 0 0;padding-inline-start:20px"><li>' +
-      [t("safe1"), t("safe2"), t("safe3"), t("safe4")].join("</li><li>") + '</li></ul><p style="margin:8px 0 0"><b>' + t("safe5") + "</b></p></div>";
+  // Rooms Qareeb has verified can be reserved, so they get "how reserving works" instead of the generic warning.
+  function canReserve(l) { return !!(SB && SB.url) && l.status === "available" && isVerified(l); }
+  function safeHtml(l) {
+    var v = l && isVerified(l), title = v ? t("howTitle") : t("safeTitle");
+    var lines = v ? [t("how1"), t("how2"), t("how3")] : [t("safe1"), t("safe2"), t("safe3"), t("safe4")];
+    return '<div class="dist safe"><b>🛡️ ' + title + '</b><ul style="margin:8px 0 0;padding-inline-start:20px"><li>' +
+      lines.join("</li><li>") + '</li></ul><p style="margin:8px 0 0"><b>' + t("safe5") + "</b></p></div>";
   }
   function stationLabel(x) { return (x.name || "") + (x.type ? (x.name ? " (" : "") + x.type + (x.name ? ")" : "") : ""); }
   function transitLine(l) {
@@ -225,7 +261,9 @@
       '<div class="stay">⏱ ' + t("minStayShort") + ": " + months(l.minStay) + "</div>" +
       '<div class="meta">🕌 ' + (l.trust.mosque == null ? "–" : walkText(l.trust.mosque)) + (l.trust.arabic ? " · 🗣️ " + t("arabicShort") : "") + "</div>" +
       '<div class="price">' + money(l.price) + " <small>" + t("perMonth") + "</small></div>" +
-      (l.status === "available" ? '<button type="button" class="btn wa" data-wa="' + l.id + '">💬 ' + t("cardWa") + "</button>" : "") + "</div></article>";
+      (l.status !== "available" ? "" : canReserve(l)
+        ? '<button type="button" class="btn wa" data-res="' + l.id + '">⚡ ' + t("reserve") + '</button><button type="button" class="btn alt" data-wa="' + l.id + '">💬 ' + t("cardWa") + "</button>"
+        : '<button type="button" class="btn wa" data-wa="' + l.id + '">💬 ' + t("cardWa") + "</button>") + "</div></article>";
   }
 
   function render() {
@@ -263,6 +301,40 @@
   }
   function roomById(id) { return LISTINGS.filter(function (x) { return x.id === id; })[0]; }
 
+  // ---- Reserve now: holds a verified room for 24 hours (done safely inside the database) ----
+  function reserveRoom(l, name, phone) {
+    return fetch(SB.url + "/rest/v1/rpc/reserve_room", {
+      method: "POST", headers: { apikey: SB.key, "Content-Type": "application/json" },
+      body: JSON.stringify({ p_listing_id: l.id, p_name: name, p_whatsapp: phone, p_center: campus ? campus.id : null })
+    }).then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); });
+  }
+  function closeRes() { $("resModal").hidden = true; if ($("modal").hidden && $("pinModal").hidden) document.body.style.overflow = ""; }
+  function openReserve(l) {
+    $("resBody").innerHTML = "<h2>" + t("resTitle") + "</h2><p><b>" + pick(l.title) + "</b> · " + money(l.price) + " " + t("perMonth") + "</p><p>" + t("resIntro") + "</p>" +
+      '<form id="resForm" class="req"><input id="resName" required maxlength="100" autocomplete="name" placeholder="' + t("resName") + '">' +
+      '<input id="resPhone" required type="tel" inputmode="tel" minlength="6" maxlength="25" autocomplete="tel" placeholder="' + t("resPhone") + '">' +
+      '<button class="btn wa" id="resSend" type="submit">⚡ ' + t("resSend") + '</button><p class="note">' + t("resNote") + '</p><p id="resMsg" class="note" role="alert"></p></form>';
+    $("resModal").hidden = false; document.body.style.overflow = "hidden";
+    $("resForm").onsubmit = function (e) {
+      e.preventDefault();
+      var name = $("resName").value.trim(), phone = $("resPhone").value.trim();
+      if (!/^[0-9+\s-]{6,25}$/.test(phone)) { $("resMsg").textContent = t("resBadPhone"); return; }
+      $("resSend").disabled = true; $("resMsg").textContent = "…";
+      reserveRoom(l, name, phone).then(function (res) {
+        if (res && res.ok) {
+          l.status = "reserved"; render(); closeDetail();
+          $("resBody").innerHTML = "<h2>✅ " + t("resDone") + "</h2><p>" + t("resDoneText") + '</p><div class="req"><button id="resWa" class="btn wa" type="button">💬 ' + t("resOpen") + "</button></div>";
+          $("resWa").onclick = function () { window.open(waLink(t("msgReserve") + plain(l.title.en) + " (#" + l.id + ", " + money(l.price) + ") - " + name), "_blank", "noopener"); };
+        } else {
+          var why = res && res.reason;
+          if (why === "taken" || why === "missing") { l.status = "reserved"; render(); }
+          $("resMsg").textContent = t(why === "taken" || why === "missing" ? "resTaken" : why === "limit" ? "resLimit" : why === "invalid" ? "resBadPhone" : "resError");
+          $("resSend").disabled = false;
+        }
+      }).catch(function () { $("resMsg").textContent = t("resError"); $("resSend").disabled = false; });
+    };
+  }
+
   function openDetail(id) {
     var l = LISTINGS.filter(function (x) { return x.id === id; })[0], tr = campus ? trip(l, campus) : null;
     var shots = (l.photos.length ? l.photos.map(function (p) { return '<img src="' + p + '" alt="">'; }) :
@@ -281,11 +353,15 @@
       '</span><span class="tag stay-tag">⏱ ' + t("minStay") + ": " + months(l.minStay) + '</span><span class="tag">' + t(l.furnished ? "furnished" : "unfurnished") +
       '</span><span class="tag">' + t(l.bills ? "bills" : "noBills") + '</span><span class="tag">' + t("g_" + (l.gender || "mixed")) + "</span></div>" +
       "<p>" + pick(l.desc) + "</p>" + amenHtml(l) + dist + gettingHtml(l) +
-      trustHtml(l) + '<div id="dmap" class="dmap"></div>' + safeHtml() +
-      (ok ? '<div class="req"><button id="askBtn" class="btn wa" type="button">💬 ' + t("request") + '</button><p class="note">' + t("reqNote") + "</p></div>"
+      trustHtml(l) + '<div id="dmap" class="dmap"></div>' + safeHtml(l) +
+      (ok ? '<div class="req">' + (canReserve(l)
+          ? '<button id="resBtn" class="btn wa" type="button">⚡ ' + t("reserve") + '</button><button id="askBtn" class="btn alt" type="button">💬 ' + t("request") + "</button>"
+          : '<button id="askBtn" class="btn wa" type="button">💬 ' + t("request") + "</button>") +
+        '<p class="note">' + t(canReserve(l) ? "resNote2" : "reqNote") + "</p></div>"
         : '<span class="btn wa off">' + t("notAvail") + "</span>") + "</div>";
     $("modal").hidden = false; document.body.style.overflow = "hidden";
     if ($("askBtn")) $("askBtn").onclick = function () { askRoom(l); };
+    if ($("resBtn")) $("resBtn").onclick = function () { openReserve(l); };
     setTimeout(function () {
       if (dmap) dmap.remove();
       dmap = L.map("dmap", { scrollWheelZoom: false });
@@ -474,7 +550,7 @@
   function mapListing(r) {
     var cols = (r.colors || []).filter(function (c) { return HEX.test(c); }); if (cols.length < 2) cols = ["#1f6f78", "#5aa9a8"];
     return {
-      id: r.id, type: r.type, area: esc(r.area), price: r.price, status: r.status, lat: r.lat, lng: r.lng, beds: r.beds,
+      id: r.id, type: r.type, area: esc(r.area), price: r.price, status: (r.status === "reserved" && r.reserved_until && new Date(r.reserved_until) < new Date()) ? "available" : r.status, lat: r.lat, lng: r.lng, beds: r.beds,
       furnished: r.furnished, bills: r.bills, minStay: r.min_stay, gender: r.gender,
       title: { en: esc(r.title_en), ar: esc(r.title_ar || r.title_en) }, desc: { en: esc(r.desc_en), ar: esc(r.desc_ar || r.desc_en) },
       photos: (r.photos || []).map(safeUrl).filter(Boolean), video: safeUrl(r.video) || "", colors: cols,
@@ -498,15 +574,19 @@
   ["walkMax", "area", "type", "price", "stay", "sort", "onlyAvail", "onlyVerified"].forEach(function (id) { $(id).onchange = render; });
   document.querySelectorAll(".vbtn").forEach(function (b) { b.onclick = function () { setView(b.dataset.view); }; });
   $("grid").onclick = function (e) {
+    var rs = e.target.closest("[data-res]");
+    if (rs) { e.stopPropagation(); var rl = roomById(+rs.dataset.res); if (rl) openReserve(rl); return; }
     var w = e.target.closest("[data-wa]");
     if (w) { e.stopPropagation(); var l = roomById(+w.dataset.wa); if (l) askRoom(l); return; }
     var c = e.target.closest(".card"); if (c) openDetail(+c.dataset.id);
   };
   $("grid").onkeydown = function (e) {
-    if (e.target.closest("[data-wa]")) return;   // the button handles its own Enter/Space
+    if (e.target.closest("[data-wa],[data-res]")) return;   // the buttons handle their own Enter/Space
     if (e.key === "Enter" || e.key === " ") { var c = e.target.closest(".card"); if (c) { e.preventDefault(); openDetail(+c.dataset.id); } }
   };
   $("close").onclick = closeDetail;
+  $("resClose").onclick = closeRes;
+  $("resModal").onclick = function (e) { if (e.target === $("resModal")) closeRes(); };
   $("modal").onclick = function (e) { if (e.target === $("modal")) closeDetail(); };
   $("pinClose").onclick = closePin;
   $("pinModal").onclick = function (e) { if (e.target === $("pinModal")) closePin(); };
@@ -515,7 +595,7 @@
     var typed = $("campusInput").value.trim(), en = typed ? esc(typed) : T.en.pinned, ar = typed ? esc(typed) : T.ar.pinned;
     closePin(); setCampus({ id: "custom", group: "custom", name: { en: en, ar: ar }, lat: pinLatLng.lat, lng: pinLatLng.lng }, "pin", typed);
   };
-  document.addEventListener("keydown", function (e) { if (e.key === "Escape") { closeDetail(); closePin(); closeSug(); } });
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape") { closeRes(); closeDetail(); closePin(); closeSug(); } });
 
   var inp = $("campusInput");
   inp.oninput = onSugInput;

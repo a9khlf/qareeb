@@ -85,6 +85,10 @@
     if (l.v_video && l.v_owner) out += '<span class="chip ok">Verified</span>';
     else out += '<span class="chip">Not verified</span>';
     if (l.v_visited) out += '<span class="chip ok">Visited</span>';
+    if (l.status === "reserved" && l.reserved_until) {
+      var expired = new Date(l.reserved_until) < new Date();
+      out += '<span class="chip ' + (expired ? "off" : "ok") + '">' + (expired ? "Hold expired" : "Held until " + esc(new Date(l.reserved_until).toLocaleString([], { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }))) + "</span>";
+    }
     out += '<span class="chip">' + esc(l.gender) + "</span>";
     return out;
   }
@@ -120,7 +124,7 @@
       state.requests.map(function (r) {
         var room = state.rooms.filter(function (x) { return x.id === r.listing_id; })[0];
         return '<div class="item" data-id="' + r.id + '"><div class="main"><h3>' + esc(room ? room.title_en : "Deleted room") + '</h3><div class="meta2">' +
-          esc(new Date(r.created_at).toLocaleString()) + " · language center: " + esc(centerName(r.center)) + " · " + esc(r.name) + " (" + esc(r.whatsapp) + ')</div></div>' +
+          esc(new Date(r.created_at).toLocaleString()) + " · language center: " + esc(centerName(r.center)) + " · " + (r.kind === "reserve" ? "<b>RESERVATION</b> · " : "") + esc(r.name) + " (" + esc(r.whatsapp) + ')</div></div>' +
           '<button class="btn danger sm" data-act="delreq" type="button">Delete</button></div>';
       }).join("");
   }
@@ -163,7 +167,7 @@
     else if (act === "delc") { var c = state.centers.filter(function (x) { return x.id === id; })[0]; if (confirm('Delete "' + c.name_en + '"? Students will no longer be able to pick it.')) api("/rest/v1/centers?id=eq." + encodeURIComponent(id), { method: "DELETE", write: true }).then(function () { msg("Deleted."); loadAll(); }).catch(function (er) { msg(er.message, true); }); }
   };
   $("list").onchange = function (e) {
-    if (e.target.dataset.act === "status") { var id = e.target.closest(".item").dataset.id; patchRoom(+id, { status: e.target.value }, "Status updated."); }
+    if (e.target.dataset.act === "status") { var id = e.target.closest(".item").dataset.id; patchRoom(+id, e.target.value === "reserved" ? { status: "reserved" } : { status: e.target.value, reserved_until: null }, "Status updated."); }
   };
   function patchRoom(id, body, ok) {
     return api("/rest/v1/listings?id=eq." + id, { method: "PATCH", body: body, write: true }).then(function () { msg(ok); return loadAll(); }).catch(function (er) { msg(er.message, true); loadAll(); });
@@ -369,6 +373,7 @@
       lat: co.lat, lng: co.lng, photos: photoList, video: (d.get("video") || "").trim(),
       v_video: f.v_video.checked, v_owner: f.v_owner.checked, v_visited: f.v_visited.checked,
       mosque_min: num(d.get("mosque_min")), halal_min: num(d.get("halal_min")), arabic: f.arabic.checked, published: f.published.checked,
+      reserved_until: d.get("status") === "reserved" ? (old.reserved_until || null) : null,
       station_name: (d.get("station_name") || "").trim() || null, station_type: d.get("station_type") || null,
       station_min: num(d.get("station_min")), bus_min: num(d.get("bus_min")), amenities: d.getAll("amen")
     };

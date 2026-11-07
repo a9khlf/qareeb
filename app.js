@@ -13,7 +13,7 @@
     en: {
       heroTitle: "Find a room within walking distance of your language center",
       heroSub: "Type your center, see the closest rooms first, and know what has been verified before you pay.",
-      fCampus: "My language center", campusPh: "Type your language center, for example Britannia",
+      fCampus: "My language center", campusPh: "Type your center, e.g. Britannia",
       fWalk: "Walking distance to my center", walkAny: "Any distance", walk10: "Up to 10 min", walk15: "Up to 15 min", walk20: "Up to 20 min", walk30: "Up to 30 min",
       fArea: "Area", fType: "Type of place", fPrice: "Maximum price (RM per month)", fSort: "Sort by",
       fStay: "Minimum stay", stayAny: "Any", stay1: "1 month", stay3: "Up to 3 months", stay6: "Up to 6 months",
@@ -80,7 +80,7 @@
     ar: {
       heroTitle: "ابحث عن سكن على مسافة مشي من مركز اللغة",
       heroSub: "اكتب اسم مركزك لتظهر لك أقرب الغرف أولاً، واعرف ما تم التحقق منه قبل أن تدفع.",
-      fCampus: "مركز اللغة الذي أدرس فيه", campusPh: "اكتب اسم مركز اللغة، مثلاً: بريتانيا",
+      fCampus: "مركز اللغة الذي أدرس فيه", campusPh: "اكتب اسم مركزك، مثلاً: بريتانيا",
       fWalk: "مسافة المشي إلى مركزي", walkAny: "أي مسافة", walk10: "حتى ١٠ دقائق", walk15: "حتى ١٥ دقيقة", walk20: "حتى ٢٠ دقيقة", walk30: "حتى ٣٠ دقيقة",
       fArea: "المنطقة", fType: "نوع السكن", fPrice: "أعلى سعر (رينغيت ماليزي شهرياً)", fSort: "ترتيب النتائج",
       fStay: "الحد الأدنى للإقامة", stayAny: "أي مدة", stay1: "شهر واحد", stay3: "حتى ٣ أشهر", stay6: "حتى ٦ أشهر",
@@ -185,7 +185,7 @@
     return { km: km, walk: walk, ride: Math.round(km * 2.5 + 3) };
   }
   function tripText(tr) {
-    var km = tr.km.toFixed(1) + " km";
+    var km = "⁦" + tr.km.toFixed(1) + " km⁩";   // isolate, so "2.3 km" keeps its order inside Arabic text
     return tr.walk <= 30 ? "🚶 " + walkText(tr.walk) + " · " + km : "🚗 ~" + rideText(tr.ride) + " · " + km;
   }
 

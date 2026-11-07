@@ -140,3 +140,6 @@ input[type=search]{width:100%;padding:13px 14px;border-radius:10px;border:0;font
 .card .btn.alt{margin-top:8px}
 .req .btn.alt{margin-top:0}
 #resModal{z-index:60}
+
+/* the chosen-center bar must stay hidden until a center is picked */
+.chosen[hidden]{display:none}

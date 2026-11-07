@@ -143,3 +143,26 @@ input[type=search]{width:100%;padding:13px 14px;border-radius:10px;border:0;font
 
 /* the chosen-center bar must stay hidden until a center is picked */
 .chosen[hidden]{display:none}
+
+/* ===== Room card: calmer, clearer hierarchy ===== */
+.grid{gap:22px}
+.card{display:flex;flex-direction:column;background:#fff;border:1px solid #e7e2d6;border-radius:20px;overflow:hidden;box-shadow:0 1px 2px rgba(31,42,46,.04),0 10px 28px rgba(31,42,46,.06);transition:box-shadow .2s,transform .2s}
+.card:hover{transform:translateY(-3px);box-shadow:0 2px 4px rgba(31,42,46,.05),0 18px 40px rgba(31,42,46,.11)}
+.card .ph{height:196px;font-size:44px}
+.card .badge{top:14px;inset-inline-start:14px;padding:5px 12px;font-size:13px;box-shadow:0 2px 8px rgba(0,0,0,.12)}
+.card .body{display:flex;flex-direction:column;gap:14px;padding:20px 20px 22px;flex:1}
+.card h3{margin:0;font-size:21px;line-height:1.25;font-weight:700;color:var(--ink)}
+.card .where{margin-top:-8px;color:var(--muted);font-size:15px}
+.card .chips{display:flex;flex-wrap:wrap;gap:8px}
+.card .chips .walk{margin:0;padding:6px 12px;border-radius:999px;font-size:14px;font-weight:600}
+.card .stay{align-self:flex-start;margin:0;padding:7px 14px;border:1.5px solid #e9c5ad;border-radius:12px;background:#fff6ef;color:var(--cta);font-size:16px;font-weight:700}
+.card .facts{display:grid;gap:8px;color:#4a595d;font-size:15px;line-height:1.4}
+.card .fact{display:flex;align-items:flex-start;gap:8px}
+.card .buy{margin-top:auto;display:grid;gap:10px;padding-top:16px;border-top:1px solid #efeadf}
+.card .price{margin:0 0 2px;font-size:28px;line-height:1;font-weight:800;letter-spacing:-.3px;color:var(--ink)}
+.card .price small{font-size:14px;font-weight:500;color:var(--muted);letter-spacing:0}
+.card .btn.wa{margin:0;padding:14px;font-size:17px;border-radius:14px}
+.card .btn.alt{margin:0;padding:11px;font-size:15px;border-width:1.5px;border-color:#e9c5ad;color:var(--cta);font-weight:600}
+.card .btn.alt:hover{background:#fff6ef;border-color:var(--cta)}
+.card.dim .ph{filter:saturate(.6)}
+@media(max-width:600px){.card .ph{height:176px}.card .body{padding:18px 18px 20px}}

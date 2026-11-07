@@ -213,7 +213,7 @@
   function stationLabel(x) { return (x.name || "") + (x.type ? (x.name ? " (" : "") + x.type + (x.name ? ")" : "") : ""); }
   function transitLine(l) {
     var x = l.transit; if (!x || x.min == null) return "";
-    return '<div class="meta">🚇 ' + walkText(x.min) + " · " + stationLabel(x) + "</div>";
+    return '<div class="fact">🚇 ' + walkText(x.min) + " · " + stationLabel(x) + "</div>";
   }
   function gettingHtml(l) {
     var x = l.transit || {}, items = [];
@@ -252,18 +252,18 @@
 
   function card(x) {
     var l = x.l;
+    var chips = (x.tr ? '<span class="walk ' + (x.tr.walk <= 15 ? "near" : "") + '">' + tripText(x.tr) + "</span>" : "") +
+      (isVerified(l) ? '<span class="walk gold">✔ ' + t("verified") + "</span>" : "");
+    var buttons = l.status !== "available" ? "" : canReserve(l)
+      ? '<button type="button" class="btn wa" data-res="' + l.id + '">⚡ ' + t("reserve") + '</button><button type="button" class="btn alt" data-wa="' + l.id + '">💬 ' + t("cardWa") + "</button>"
+      : '<button type="button" class="btn wa" data-wa="' + l.id + '">💬 ' + t("cardWa") + "</button>";
     return '<article class="card ' + (l.status === "taken" ? "dim" : "") + '" data-id="' + l.id + '" tabindex="0">' +
       '<div class="ph" style="' + photoStyle(l) + '"><span class="badge ' + l.status + '">' + t(l.status) + "</span>" + (l.photos.length ? "" : "🏠") + "</div>" +
-      '<div class="body"><h3>' + pick(l.title) + '</h3><div class="meta">' + t(l.type) + " · " + l.area + '</div>' +
-      (x.tr ? '<span class="walk ' + (x.tr.walk <= 15 ? "near" : "") + '">' + tripText(x.tr) + "</span>" : "") +
-      (isVerified(l) ? '<span class="walk gold">✔ ' + t("verified") + "</span>" : "") +
-      transitLine(l) +
+      '<div class="body"><h3>' + pick(l.title) + '</h3><div class="where">' + t(l.type) + " · " + l.area + "</div>" +
+      (chips ? '<div class="chips">' + chips + "</div>" : "") +
       '<div class="stay">⏱ ' + t("minStayShort") + ": " + months(l.minStay) + "</div>" +
-      '<div class="meta">🕌 ' + (l.trust.mosque == null ? "–" : walkText(l.trust.mosque)) + (l.trust.arabic ? " · 🗣️ " + t("arabicShort") : "") + "</div>" +
-      '<div class="price">' + money(l.price) + " <small>" + t("perMonth") + "</small></div>" +
-      (l.status !== "available" ? "" : canReserve(l)
-        ? '<button type="button" class="btn wa" data-res="' + l.id + '">⚡ ' + t("reserve") + '</button><button type="button" class="btn alt" data-wa="' + l.id + '">💬 ' + t("cardWa") + "</button>"
-        : '<button type="button" class="btn wa" data-wa="' + l.id + '">💬 ' + t("cardWa") + "</button>") + "</div></article>";
+      '<div class="facts">' + transitLine(l) + '<div class="fact">🕌 ' + (l.trust.mosque == null ? "–" : walkText(l.trust.mosque)) + (l.trust.arabic ? " · 🗣️ " + t("arabicShort") : "") + "</div></div>" +
+      '<div class="buy"><div class="price">' + money(l.price) + " <small>" + t("perMonth") + "</small></div>" + buttons + "</div></div></article>";
   }
 
   function render() {

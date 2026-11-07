@@ -216,3 +216,45 @@ body{font-family:"Plus Jakarta Sans","IBM Plex Sans Arabic",system-ui,-apple-sys
 @media(max-width:600px){.hero{padding:40px 0 92px}.searchcard{padding:18px;border-radius:20px}.searchwrap{margin-top:-56px}}
 
 @media(max-width:600px){.searchcard .search{grid-template-columns:1fr 1fr;gap:14px 12px}.searchcard .search .wide{grid-column:1/-1}.searchcard select{padding:12px 10px;font-size:15px}.searchcard .search label span{font-size:12.5px}}
+
+/* ===== Cost to move in ===== */
+.cost{background:#fff;border:1px solid #e4dfd2}
+.cost .crow{display:flex;justify-content:space-between;gap:14px;padding:9px 0;border-bottom:1px dashed var(--line);font-size:15px}
+.cost .crow span{color:#4a595d}
+.cost .crow b{white-space:nowrap}
+.cost .crow.total{margin-top:4px;padding-top:13px;border-top:2px solid var(--ink);border-bottom:0;font-size:17px}
+.cost .crow.total span{color:var(--ink);font-weight:700}
+.cost .crow.total b{font-size:21px;color:var(--cta)}
+.cost .small{margin:8px 0 0}
+
+/* ===== Palette v3: premium housing =====
+   deep teal + midnight (trust), warm ivory (calm), champagne gold (verified / highlights),
+   copper (the one action colour). All text pairs checked at 4.5:1 or better. */
+:root{
+  --bg:#faf8f3; --card:#fff; --ink:#1b2a30; --muted:#5c6a6e; --line:#e8e2d4;
+  --brand:#0e5566; --brand-d:#0a3a47; --brand-soft:#e6f0f2;
+  --cta:#b4531a; --cta-d:#8f3f12;
+  --gold:#c9a24a; --gold-soft:#f5ecd6; --gold-text:#6b4e0e; --midnight:#082b36;
+}
+.top{border-bottom:1px solid #eadfc4}
+.hero{background:radial-gradient(900px 360px at 88% -20%,rgba(201,162,74,.14),transparent 62%),radial-gradient(700px 320px at 0% 115%,rgba(255,255,255,.07),transparent 65%),linear-gradient(160deg,#082b36 0%,#0a3f4d 55%,#0e5566 100%)}
+.hero .eyebrow{color:#d9bd7a}
+.hero .eyebrow::before{content:"";display:inline-block;width:30px;height:2px;margin-inline-end:12px;vertical-align:middle;background:#d9bd7a}
+.hero p.lead{color:#cfe3e8}
+.searchcard{border-color:#e8e2d4}
+.card{border-color:#e8e2d4}
+.card .buy{border-top-color:#efe9db}
+.card .stay,.stay{background:#fdf4ec;border-color:#ecd0b8}
+.btn.wa{box-shadow:0 6px 16px rgba(180,83,26,.28)}
+.walk.gold{background:var(--gold-soft);color:var(--gold-text);border:1px solid #e6d6a8}
+.walk.near{background:#e1f1ea;color:#0b6b4d}
+.tag{background:#f1ece0}
+.stay-tag,.tag.stay-tag{background:#fdf4ec;border-color:#ecd0b8}
+.owner{background:linear-gradient(180deg,#fff 0%,#fbf7ec 100%);border-color:#eadfc4}
+.owner .btn{background:var(--brand)}
+footer{margin-top:48px;padding:40px 0 44px;background:var(--midnight);color:#b9cdd2;font-size:15px}
+footer .foot-note{color:#d9bd7a}
+footer::before{content:"";display:block;width:56px;height:2px;margin:0 auto 22px;background:var(--gold)}
+.vbtn.on{background:var(--midnight);border-color:var(--midnight)}
+.sl-dots i.on{background:#fff}
+.cost .crow.total b{color:var(--cta)}

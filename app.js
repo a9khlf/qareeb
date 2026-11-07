@@ -47,7 +47,8 @@
       request: "I want this room", cardWa: "Ask on WhatsApp", notAvail: "Not available at the moment",
       reqNote: "One tap: WhatsApp opens with a ready message about this room.",
       msg: "Hello, I am interested in this accommodation I found on Qareeb: ",
-      reserve: "Reserve now", prevPhoto: "Previous photo", nextPhoto: "Next photo", resTitle: "Reserve this room",
+      reserve: "Reserve now", prevPhoto: "Previous photo", nextPhoto: "Next photo", costCard: "Move-in total", costTitle: "Cost to move in", costAdvance: "Rent paid in advance", costDeposit: "Security deposit", costUtil: "Utility deposit", costTotal: "Total to pay at move-in", agrYes: "Written tenancy agreement provided", agrNo: "Written agreement: not confirmed yet", costNote: "Ask for the deposit refund terms in writing before you pay.",
+      resTitle: "Reserve this room",
       resIntro: "We will hold this room for you for 24 hours. We confirm on WhatsApp and send the deposit details.",
       resName: "Your name", resPhone: "Your WhatsApp number (with country code)", resSend: "Confirm reservation",
       resNote: "Your name and number are used only to contact you about this reservation.",
@@ -115,7 +116,8 @@
       request: "أريد هذه الغرفة", cardWa: "اسأل عبر واتساب", notAvail: "غير متاحة حالياً",
       reqNote: "بنقرة واحدة: يفتح واتساب برسالة جاهزة عن هذه الغرفة.",
       msg: "مرحباً، أنا مهتم بهذا السكن الذي وجدته على موقع قريب: ",
-      reserve: "احجز الآن", prevPhoto: "الصورة السابقة", nextPhoto: "الصورة التالية", resTitle: "احجز هذه الغرفة",
+      reserve: "احجز الآن", prevPhoto: "الصورة السابقة", nextPhoto: "الصورة التالية", costCard: "إجمالي الانتقال", costTitle: "التكلفة عند الانتقال", costAdvance: "إيجار مدفوع مقدماً", costDeposit: "وديعة التأمين", costUtil: "وديعة الخدمات (كهرباء وماء)", costTotal: "الإجمالي عند الانتقال", agrYes: "عقد إيجار مكتوب متوفر", agrNo: "العقد المكتوب: لم يتأكد بعد", costNote: "اطلب كتابةً شروط استرداد الوديعة قبل أن تدفع.",
+      resTitle: "احجز هذه الغرفة",
       resIntro: "سنحتفظ لك بالغرفة لمدة ٢٤ ساعة، ونؤكد الحجز عبر واتساب ونرسل لك تفاصيل العربون.",
       resName: "اسمك", resPhone: "رقم واتساب الخاص بك (مع رمز الدولة)", resSend: "تأكيد الحجز",
       resNote: "نستخدم اسمك ورقمك فقط للتواصل معك بخصوص هذا الحجز.",
@@ -252,6 +254,26 @@
     return out;
   }
 
+  // ---- cost to move in ----
+  function costParts(l) {
+    var c = l.cost; if (!c) return null;
+    var adv = Math.round(l.price * c.advance), dep = Math.round(l.price * c.deposit), util = c.util || 0;
+    return { adv: adv, dep: dep, util: util, total: adv + dep + util, c: c };
+  }
+  function monthsDec(n) { return Number.isInteger(n) ? months(n) : (lang === "ar" ? n + " أشهر" : n + " months"); }
+  function costLine(l) { var p = costParts(l); return p ? '<div class="fact">💳 ' + t("costCard") + ": <b>" + money(p.total) + "</b></div>" : ""; }
+  function costHtml(l) {
+    var p = costParts(l); if (!p) return "";
+    function row(label, val, cls) { return '<div class="crow ' + (cls || "") + '"><span>' + label + "</span><b>" + money(val) + "</b></div>"; }
+    return '<div class="dist cost"><b>' + t("costTitle") + "</b>" +
+      (p.adv ? row(t("costAdvance") + " (" + monthsDec(p.c.advance) + ")", p.adv) : "") +
+      row(t("costDeposit") + " (" + monthsDec(p.c.deposit) + ")", p.dep) +
+      (p.util ? row(t("costUtil"), p.util) : "") +
+      row(t("costTotal"), p.total, "total") +
+      '<p class="small">' + (p.c.agreement ? "✅ " + t("agrYes") : "⬜ " + t("agrNo")) + "</p>" +
+      '<p class="small">' + t("costNote") + "</p></div>";
+  }
+
   // ---- picture slider: arrows, dots, swipe (scroll-snap) and keyboard arrows ----
   function slideCount(l) { return l.photos.length || 3; }
   function trackHtml(l) {
@@ -291,7 +313,7 @@
       '<div class="body"><h3>' + pick(l.title) + '</h3><div class="where">' + t(l.type) + " · " + l.area + "</div>" +
       (chips ? '<div class="chips">' + chips + "</div>" : "") +
       '<div class="stay">⏱ ' + t("minStayShort") + ": " + months(l.minStay) + "</div>" +
-      '<div class="facts">' + transitLine(l) + '<div class="fact">🕌 ' + (l.trust.mosque == null ? "–" : walkText(l.trust.mosque)) + (l.trust.arabic ? " · 🗣️ " + t("arabicShort") : "") + "</div></div>" +
+      '<div class="facts">' + transitLine(l) + costLine(l) + '<div class="fact">🕌 ' + (l.trust.mosque == null ? "–" : walkText(l.trust.mosque)) + (l.trust.arabic ? " · 🗣️ " + t("arabicShort") : "") + "</div></div>" +
       '<div class="buy"><div class="price">' + money(l.price) + " <small>" + t("perMonth") + "</small></div>" + buttons + "</div></div></article>";
   }
 
@@ -381,7 +403,7 @@
       '<div class="tags"><span class="tag">' + t(l.type) + '</span><span class="tag">' + l.area + '</span><span class="tag">' + bedrooms(l.beds) +
       '</span><span class="tag stay-tag">⏱ ' + t("minStay") + ": " + months(l.minStay) + '</span><span class="tag">' + t(l.furnished ? "furnished" : "unfurnished") +
       '</span><span class="tag">' + t(l.bills ? "bills" : "noBills") + '</span><span class="tag">' + t("g_" + (l.gender || "mixed")) + "</span></div>" +
-      "<p>" + pick(l.desc) + "</p>" + amenHtml(l) + dist + gettingHtml(l) +
+      "<p>" + pick(l.desc) + "</p>" + amenHtml(l) + dist + gettingHtml(l) + costHtml(l) +
       trustHtml(l) + '<div id="dmap" class="dmap"></div>' + safeHtml(l) +
       (ok ? '<div class="req">' + (canReserve(l)
           ? '<button id="resBtn" class="btn wa" type="button">⚡ ' + t("reserve") + '</button><button id="askBtn" class="btn alt" type="button">💬 ' + t("request") + "</button>"
@@ -584,6 +606,7 @@
       title: { en: esc(r.title_en), ar: esc(r.title_ar || r.title_en) }, desc: { en: esc(r.desc_en), ar: esc(r.desc_ar || r.desc_en) },
       photos: (r.photos || []).map(safeUrl).filter(Boolean), video: safeUrl(r.video) || "", colors: cols,
       amenities: (r.amenities || []).filter(function (k) { return /^[a-z]+$/.test(k); }),
+      cost: r.deposit_months == null ? null : { deposit: Number(r.deposit_months), advance: Number(r.advance_months || 0), util: Number(r.utility_deposit || 0), agreement: !!r.agreement_provided },
       transit: { name: esc(r.station_name || ""), type: esc(r.station_type || ""), min: r.station_min, bus: r.bus_min },
       trust: { video: r.v_video, owner: r.v_owner, visited: r.v_visited, mosque: r.mosque_min, halal: r.halal_min, arabic: r.arabic }
     };

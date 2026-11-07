@@ -283,6 +283,11 @@
       '<fieldset><legend>Photos and video</legend><div id="thumbs" class="thumbs"></div>' +
       '<div class="fld"><label for="f-ph">Add photos</label><input id="f-ph" type="file" accept="image/*" multiple><p class="help">Photos are resized automatically. The first photo is the cover.</p></div>' +
       '<div class="fld"><label for="f-vu">Video link</label><input id="f-vu" name="video" type="url" value="' + esc(r.video) + '" placeholder="https://..."><p class="help">Or upload an MP4 / WebM file (up to 50 MB):</p><input id="f-vf" type="file" accept="video/mp4,video/webm"></div></fieldset>' +
+      '<fieldset><legend>Move-in costs (shown to students)</legend><div class="row2">' +
+      '<div class="fld"><label for="f-dm">Security deposit (months of rent)</label><input id="f-dm" name="deposit_months" type="number" min="0" max="12" step="0.5" value="' + esc(r.deposit_months == null ? "" : r.deposit_months) + '" placeholder="e.g. 2"></div>' +
+      '<div class="fld"><label for="f-am">Rent paid in advance (months)</label><input id="f-am" name="advance_months" type="number" min="0" max="12" step="0.5" value="' + esc(r.advance_months == null ? "" : r.advance_months) + '" placeholder="e.g. 1"></div>' +
+      '<div class="fld"><label for="f-ud">Utility deposit (RM)</label><input id="f-ud" name="utility_deposit" type="number" min="0" max="5000" step="10" value="' + esc(r.utility_deposit == null ? "" : r.utility_deposit) + '" placeholder="e.g. 150"></div></div>' +
+      '<p class="help">Leave the security deposit empty if you do not want a cost box on this room.</p>' + chk("agreement_provided", "A written tenancy agreement is provided", r.agreement_provided) + "</fieldset>" +
       '<fieldset><legend>Getting around and advantages</legend>' +
       '<div class="row2"><div class="fld"><label for="f-sn">Nearest station (name)</label><input id="f-sn" name="station_name" maxlength="80" value="' + esc(r.station_name || "") + '" placeholder="e.g. Ampang Park"></div>' +
       '<div class="fld"><span>Station type</span>' + sel("station_type", [["", "-"], ["MRT", "MRT"], ["LRT", "LRT"], ["Monorail", "Monorail"], ["KTM", "KTM"], ["BRT", "BRT"], ["Other", "Other"]], r.station_type || "") + "</div>" +
@@ -374,6 +379,7 @@
       v_video: f.v_video.checked, v_owner: f.v_owner.checked, v_visited: f.v_visited.checked,
       mosque_min: num(d.get("mosque_min")), halal_min: num(d.get("halal_min")), arabic: f.arabic.checked, published: f.published.checked,
       reserved_until: d.get("status") === "reserved" ? (old.reserved_until || null) : null,
+      deposit_months: num(d.get("deposit_months")), advance_months: num(d.get("advance_months")), utility_deposit: num(d.get("utility_deposit")), agreement_provided: f.agreement_provided.checked,
       station_name: (d.get("station_name") || "").trim() || null, station_type: d.get("station_type") || null,
       station_min: num(d.get("station_min")), bus_min: num(d.get("bus_min")), amenities: d.getAll("amen")
     };

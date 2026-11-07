@@ -8,6 +8,9 @@
 <meta name="description" content="Find a room, studio or apartment within walking distance of your English language center in Kuala Lumpur and Ampang. Compare verified listings, nearby metro and bus, and distance to the nearest mosque and halal food.">
 <link rel="icon" type="image/svg+xml" href="logo.svg">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -20,72 +23,77 @@
 
 <section class="hero">
   <div class="wrap">
+    <p class="eyebrow" data-i18n="heroEyebrow">Student housing · Kuala Lumpur &amp; Ampang</p>
     <h1 data-i18n="heroTitle">Find a room within walking distance of your language center</h1>
-    <p data-i18n="heroSub">Type your center, see the closest rooms first, and know what has been verified before you pay.</p>
+    <p class="lead" data-i18n="heroSub">Type your center, see the closest rooms first, and know what has been verified before you pay.</p>
+  </div>
+</section>
 
+<section class="wrap searchwrap">
+  <div class="searchcard">
     <div class="search">
-      <div class="wide">
-        <span class="lbl" id="campusLbl" data-i18n="fCampus">My language center</span>
-        <div class="combo" id="combo">
-          <input id="campusInput" type="search" autocomplete="off" spellcheck="false" role="combobox" aria-labelledby="campusLbl" aria-expanded="false" aria-controls="campusList" aria-autocomplete="list" data-i18n-ph="campusPh" placeholder="Type your center, e.g. Britannia">
-          <ul id="campusList" class="combo-list" role="listbox" hidden></ul>
+        <div class="wide">
+          <span class="lbl" id="campusLbl" data-i18n="fCampus">My language center</span>
+          <div class="combo" id="combo">
+            <input id="campusInput" type="search" autocomplete="off" spellcheck="false" role="combobox" aria-labelledby="campusLbl" aria-expanded="false" aria-controls="campusList" aria-autocomplete="list" data-i18n-ph="campusPh" placeholder="Type your center, e.g. Britannia">
+            <ul id="campusList" class="combo-list" role="listbox" hidden></ul>
+          </div>
+          <div id="campusChosen" class="chosen" hidden></div>
         </div>
-        <div id="campusChosen" class="chosen" hidden></div>
+        <label>
+          <span data-i18n="fWalk">Walking distance to my center</span>
+          <select id="walkMax">
+            <option value="" data-i18n="walkAny">Any distance</option>
+            <option value="10" data-i18n="walk10">Up to 10 min</option>
+            <option value="15" data-i18n="walk15">Up to 15 min</option>
+            <option value="20" data-i18n="walk20">Up to 20 min</option>
+            <option value="30" data-i18n="walk30">Up to 30 min</option>
+          </select>
+        </label>
+        <label>
+          <span data-i18n="fArea">Area</span>
+          <select id="area">
+            <option value="" data-i18n="all">All</option>
+          </select>
+        </label>
+        <label>
+          <span data-i18n="fType">Type of place</span>
+          <select id="type">
+            <option value="" data-i18n="all">All</option>
+            <option value="room" data-i18n="room">Room</option>
+            <option value="studio" data-i18n="studio">Studio</option>
+            <option value="apartment" data-i18n="apartment">Apartment</option>
+          </select>
+        </label>
+        <label>
+          <span data-i18n="fPrice">Maximum price (RM per month)</span>
+          <select id="price">
+            <option value="" data-i18n="any">Any</option>
+            <option value="700">RM 700</option>
+            <option value="1000">RM 1,000</option>
+            <option value="1500">RM 1,500</option>
+            <option value="2500">RM 2,500</option>
+          </select>
+        </label>
+        <label>
+          <span data-i18n="fStay">Minimum stay</span>
+          <select id="stay">
+            <option value="" data-i18n="stayAny">Any</option>
+            <option value="1" data-i18n="stay1">1 month</option>
+            <option value="3" data-i18n="stay3">Up to 3 months</option>
+            <option value="6" data-i18n="stay6">Up to 6 months</option>
+          </select>
+        </label>
+        <label>
+          <span data-i18n="fSort">Sort by</span>
+          <select id="sort">
+            <option value="near" data-i18n="sNear">Closest to my center</option>
+            <option value="cheap" data-i18n="sCheap">Lowest price</option>
+          </select>
+        </label>
       </div>
-      <label>
-        <span data-i18n="fWalk">Walking distance to my center</span>
-        <select id="walkMax">
-          <option value="" data-i18n="walkAny">Any distance</option>
-          <option value="10" data-i18n="walk10">Up to 10 min</option>
-          <option value="15" data-i18n="walk15">Up to 15 min</option>
-          <option value="20" data-i18n="walk20">Up to 20 min</option>
-          <option value="30" data-i18n="walk30">Up to 30 min</option>
-        </select>
-      </label>
-      <label>
-        <span data-i18n="fArea">Area</span>
-        <select id="area">
-          <option value="" data-i18n="all">All</option>
-        </select>
-      </label>
-      <label>
-        <span data-i18n="fType">Type of place</span>
-        <select id="type">
-          <option value="" data-i18n="all">All</option>
-          <option value="room" data-i18n="room">Room</option>
-          <option value="studio" data-i18n="studio">Studio</option>
-          <option value="apartment" data-i18n="apartment">Apartment</option>
-        </select>
-      </label>
-      <label>
-        <span data-i18n="fPrice">Maximum price (RM per month)</span>
-        <select id="price">
-          <option value="" data-i18n="any">Any</option>
-          <option value="700">RM 700</option>
-          <option value="1000">RM 1,000</option>
-          <option value="1500">RM 1,500</option>
-          <option value="2500">RM 2,500</option>
-        </select>
-      </label>
-      <label>
-        <span data-i18n="fStay">Minimum stay</span>
-        <select id="stay">
-          <option value="" data-i18n="stayAny">Any</option>
-          <option value="1" data-i18n="stay1">1 month</option>
-          <option value="3" data-i18n="stay3">Up to 3 months</option>
-          <option value="6" data-i18n="stay6">Up to 6 months</option>
-        </select>
-      </label>
-      <label>
-        <span data-i18n="fSort">Sort by</span>
-        <select id="sort">
-          <option value="near" data-i18n="sNear">Closest to my center</option>
-          <option value="cheap" data-i18n="sCheap">Lowest price</option>
-        </select>
-      </label>
-    </div>
-    <label class="check"><input type="checkbox" id="onlyAvail" checked> <span data-i18n="onlyAvail">Available rooms only</span></label>
-    <label class="check"><input type="checkbox" id="onlyVerified"> <span data-i18n="onlyVerified">Verified rooms only</span></label>
+      <label class="check"><input type="checkbox" id="onlyAvail" checked> <span data-i18n="onlyAvail">Available rooms only</span></label>
+      <label class="check"><input type="checkbox" id="onlyVerified"> <span data-i18n="onlyVerified">Verified rooms only</span></label>
   </div>
 </section>
 

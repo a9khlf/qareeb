@@ -191,3 +191,28 @@ input[type=search]{width:100%;padding:13px 14px;border-radius:10px;border:0;font
 .sl-btn.prev{left:auto;inset-inline-start:12px}
 .sl-btn.next{right:auto;inset-inline-end:12px}
 [dir=rtl] .sl-btn span{display:inline-block;transform:scaleX(-1)}
+
+/* ===== Premium banner + floating search panel ===== */
+body{font-family:"Plus Jakarta Sans","IBM Plex Sans Arabic",system-ui,-apple-system,"Segoe UI",Tahoma,sans-serif;-webkit-font-smoothing:antialiased}
+[dir=rtl] body{font-family:"IBM Plex Sans Arabic","Plus Jakarta Sans",system-ui,Tahoma,sans-serif}
+.hero{background:radial-gradient(900px 360px at 88% -20%,rgba(255,255,255,.11),transparent 62%),radial-gradient(600px 300px at 0% 110%,rgba(200,137,43,.10),transparent 65%),linear-gradient(160deg,#093b49 0%,#0f5c70 100%);color:#fff;padding:60px 0 108px}
+.hero .eyebrow{margin:0 0 16px;font-size:13px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:#a6d0d8;opacity:1}
+[dir=rtl] .hero .eyebrow{letter-spacing:0;font-size:14px}
+.hero h1{margin:0 0 16px;max-width:760px;font-size:clamp(30px,4.4vw,48px);font-weight:600;line-height:1.14;letter-spacing:-.025em}
+[dir=rtl] .hero h1{letter-spacing:0;line-height:1.35}
+.hero p.lead{margin:0;max-width:600px;font-size:clamp(16px,1.9vw,19px);line-height:1.65;font-weight:400;color:#cde5e9;opacity:1}
+.searchwrap{position:relative;z-index:5;margin-top:-64px}
+.searchcard{background:#fff;border:1px solid #e4dfd2;border-radius:24px;padding:24px;box-shadow:0 22px 60px rgba(9,59,73,.20),0 2px 8px rgba(9,59,73,.06)}
+.searchcard .search{display:grid;grid-template-columns:repeat(auto-fit,minmax(176px,1fr));gap:16px}
+.searchcard .lbl,.searchcard .search label span{display:block;margin-bottom:7px;font-size:13px;font-weight:600;color:var(--muted);opacity:1}
+.searchcard select,.searchcard input[type=search]{border:1px solid #d9d4c8;border-radius:13px;padding:13px 14px;background:#fff;color:var(--ink);font-size:16px}
+.searchcard select:hover,.searchcard input[type=search]:hover{border-color:#bdb7a8}
+.searchcard select:focus,.searchcard input[type=search]:focus{outline:2px solid var(--brand);outline-offset:1px;border-color:var(--brand)}
+.searchcard select:disabled{background:#f3f1ea;color:#8a9296}
+.searchcard .check{display:inline-flex;margin:18px 0 0;margin-inline-end:26px;color:var(--ink);font-size:15px}
+.searchcard .chosen{background:#eaf4f6;color:var(--ink);border:1px solid #cfe3e7}
+.searchcard .chosen a,.searchcard .linkbtn{color:var(--brand);font-weight:600}
+.views{margin-top:30px}
+@media(max-width:600px){.hero{padding:40px 0 92px}.searchcard{padding:18px;border-radius:20px}.searchwrap{margin-top:-56px}}
+
+@media(max-width:600px){.searchcard .search{grid-template-columns:1fr 1fr;gap:14px 12px}.searchcard .search .wide{grid-column:1/-1}.searchcard select{padding:12px 10px;font-size:15px}.searchcard .search label span{font-size:12.5px}}

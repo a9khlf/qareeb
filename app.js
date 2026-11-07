@@ -13,6 +13,7 @@
     en: {
       heroTitle: "Find a room within walking distance of your language center",
       heroSub: "Type your center, see the closest rooms first, and know what has been verified before you pay.",
+      heroEyebrow: "Student housing · Kuala Lumpur & Ampang",
       fCampus: "My language center", campusPh: "Type your center, e.g. Britannia",
       fWalk: "Walking distance to my center", walkAny: "Any distance", walk10: "Up to 10 min", walk15: "Up to 15 min", walk20: "Up to 20 min", walk30: "Up to 30 min",
       fArea: "Area", fType: "Type of place", fPrice: "Maximum price (RM per month)", fSort: "Sort by",
@@ -80,6 +81,7 @@
     ar: {
       heroTitle: "ابحث عن سكن على مسافة مشي من مركز اللغة",
       heroSub: "اكتب اسم مركزك لتظهر لك أقرب الغرف أولاً، واعرف ما تم التحقق منه قبل أن تدفع.",
+      heroEyebrow: "سكن الطلاب · كوالالمبور وأمبانغ",
       fCampus: "مركز اللغة الذي أدرس فيه", campusPh: "اكتب اسم مركزك، مثلاً: بريتانيا",
       fWalk: "مسافة المشي إلى مركزي", walkAny: "أي مسافة", walk10: "حتى ١٠ دقائق", walk15: "حتى ١٥ دقيقة", walk20: "حتى ٢٠ دقيقة", walk30: "حتى ٣٠ دقيقة",
       fArea: "المنطقة", fType: "نوع السكن", fPrice: "أعلى سعر (رينغيت ماليزي شهرياً)", fSort: "ترتيب النتائج",

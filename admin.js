@@ -525,17 +525,41 @@
           (a.summary ? '<div class="meta2" style="margin-top:2px">' + esc(a.summary) + "</div>" : "") + "</div></div>";
       }).join("") : '<p class="meta2">Nothing recorded yet.</p>');
   }
+  function openWork(email) { return state.requests.filter(function (r) { return r.assigned_to === email && r.status !== "rented" && r.status !== "lost"; }).length; }
+  function linkCount(email) { return state.links.filter(function (k) { return k.agent_email === email && k.active; }).length; }
   function renderStaff() {
-    var intro = '<p class="meta2" style="margin:0 0 12px">Add a person with their email, a role and a password, then give them those details. They log in on this page with them. Use <b>Edit access</b> to change their role, their switches or their password, and <b>Switch off</b> to stop access at any time.</p>';
-    $("list").innerHTML = intro + state.staff.map(function (s) {
+    var current = state.staff.filter(function (s) { return !s.left_at; }), left = state.staff.filter(function (s) { return s.left_at; });
+    var frozenN = current.filter(function (s) { return !s.active; }).length;
+    var intro = '<p class="meta2" style="margin:0 0 12px"><b>' + (current.length - frozenN) + " active" + (frozenN ? ", " + frozenN + " frozen" : "") + '.</b> Add a person with their email, a role and a password, then give them those details. <b>Freeze</b> stops someone signing in and deletes nothing. <b>Remove</b> hands their open leads and links to a colleague and keeps their history. Someone who left can be brought back.</p>';
+    var card = function (s) {
       var on = SWITCHES.filter(function (x) { return s.role === "owner" || s[x[0]]; }).map(function (x) { return '<span class="chip">' + esc(x[1].replace(/ \(.*\)$/, "")) + "</span>"; }).join("") || '<span class="meta2">Can look only</span>';
-      var me = access && s.email === access.email;
-      return '<div class="item" data-id="' + esc(s.email) + '"><div class="main"><h3>' + esc(s.name || s.email) + (me ? ' <span class="chip">You</span>' : "") + '</h3><div class="meta2">' + esc(s.email) + " · " + esc(ROLES[s.role] ? ROLES[s.role].label : s.role) + '</div>' +
-        '<div style="margin-top:6px"><span class="chip ' + (s.active ? "ok" : "off") + '">' + (s.active ? "Active" : "Switched off") + "</span>" + on + "</div>" +
-        '<div class="acts"><button class="btn sm" data-act="edits" type="button">Edit access</button>' +
-        '<button class="btn sec sm" data-act="actives" type="button">' + (s.active ? "Switch off" : "Switch on") + "</button>" +
-        '<button class="btn danger sm" data-act="dels" type="button">Remove</button></div></div></div>';
-    }).join("");
+      var me = access && s.email === access.email, o = openWork(s.email), lk = linkCount(s.email);
+      return '<div class="item" data-id="' + esc(s.email) + '"><div class="main"><h3>' + esc(s.name || s.email) + (me ? ' <span class="chip">You</span>' : "") + '</h3><div class="meta2">' + esc(s.email) + " · " + esc(ROLES[s.role] ? ROLES[s.role].label : s.role) + (state.requests.length || lk ? " · " + o + " open lead" + (o === 1 ? "" : "s") + (lk ? " · " + lk + " link" + (lk === 1 ? "" : "s") : "") : "") + "</div>" +
+        '<div style="margin-top:6px"><span class="chip ' + (s.active ? "ok" : "off") + '">' + (s.active ? "Active" : "Frozen") + "</span>" + on + "</div>" +
+        '<div class="acts"><button class="btn sm" data-act="edits" type="button">Role and access</button>' +
+        (me ? "" : '<button class="btn sec sm" data-act="actives" type="button">' + (s.active ? "Freeze" : "Unfreeze") + "</button>" + '<button class="btn danger sm" data-act="dels" type="button">Remove…</button>') + "</div></div></div>";
+    };
+    var leftHtml = left.length ? '<h3 style="margin:22px 0 4px">Left the team (' + left.length + ')</h3><p class="help" style="margin-bottom:8px">Kept for history: their past lead credit, notes and changes remain. Bring someone back if they return.</p>' + left.map(function (s) {
+      return '<div class="item" data-id="' + esc(s.email) + '"><div class="main"><h3>' + esc(s.name || s.email) + '</h3><div class="meta2">' + esc(s.email) + " · " + esc(ROLES[s.role] ? ROLES[s.role].label : s.role) + " · left " + esc(new Date(s.left_at).toLocaleDateString([], { day: "numeric", month: "short", year: "numeric" })) + '</div><div class="acts"><button class="btn sm" data-act="restores" type="button">Bring back</button></div></div></div>';
+    }).join("") : "";
+    $("list").innerHTML = intro + current.map(card).join("") + leftHtml;
+  }
+  function openRemoveForm(s) {
+    var o = openWork(s.email), lk = linkCount(s.email);
+    var mates = state.staff.filter(function (x) { return x.active && !x.left_at && x.email !== s.email; });
+    var need = o > 0 || lk > 0;
+    $("dform").innerHTML = '<form id="rmf"><h2>Remove ' + esc(s.name || s.email) + "?</h2>" +
+      '<p>They will no longer be able to sign in, and they move to <b>Left the team</b>. Nothing is deleted: their past lead credit, notes and history stay, and you can bring them back later.</p>' +
+      '<p><b>' + o + "</b> open lead" + (o === 1 ? "" : "s") + " and <b>" + lk + "</b> active link" + (lk === 1 ? "" : "s") + " will be handed over.</p>" +
+      '<div class="fld"><label for="rm-to">Hand over to</label><select id="rm-to" name="to"' + (need ? " required" : "") + '><option value="">' + (need ? "Choose a colleague…" : "No handover needed") + "</option>" + mates.map(function (m) { return '<option value="' + esc(m.email) + '">' + esc(m.name || m.email) + "</option>"; }).join("") + "</select></div>" +
+      '<div class="foot2"><button type="button" class="btn sec" id="cancelBtn">Cancel</button><button type="submit" class="btn danger" id="saveBtn">Remove from the team</button></div></form>';
+    dlg.showModal(); $("cancelBtn").onclick = closeDlg;
+    $("rmf").onsubmit = function (e) {
+      e.preventDefault(); $("saveBtn").disabled = true;
+      api("/rest/v1/rpc/remove_staff", { method: "POST", body: { p_email: s.email, p_to: $("rm-to").value || null } })
+        .then(function (res) { closeDlg(); msg("Removed. " + (res && res.leads ? res.leads + " lead" + (res.leads === 1 ? "" : "s") + " handed over" : "No leads to hand over") + (res && res.links ? ", " + res.links + " link" + (res.links === 1 ? "" : "s") + " reassigned" : "") + "."); return loadAll(); })
+        .catch(function (er) { msg(er.message, true); $("saveBtn").disabled = false; });
+    };
   }
   function renderRooms() {
     if (!state.rooms.length) { $("list").innerHTML = '<p class="meta2">No rooms yet. Click "Add room" to create the first one.</p>'; return; }
@@ -562,7 +586,7 @@
   function roomOf(r) { return state.rooms.filter(function (x) { return x.id === r.listing_id; })[0]; }
   function personName(email) {
     if (!email) return "Nobody";
-    var p = state.team.filter(function (t) { return t.email === email; })[0];
+    var p = state.team.filter(function (t) { return t.email === email; })[0] || state.staff.filter(function (t) { return t.email === email; })[0];
     return p && p.name ? p.name : email;
   }
   function leadMatches(r) {
@@ -697,8 +721,9 @@
         .then(function () { msg("Note added."); return loadLeads(); }).catch(function (er) { msg(er.message, true); b.disabled = false; });
     }
     else if (act === "edits") openStaffForm(state.staff.filter(function (x) { return x.email === id; })[0]);
-    else if (act === "actives") { var st = state.staff.filter(function (x) { return x.email === id; })[0]; patchStaff(st.email, { active: !st.active }, st.active ? "Switched off. They can no longer use the admin page." : "Switched on."); }
-    else if (act === "dels") { if (confirm("Remove " + id + "? Their login is deleted and they lose all access.")) api("/rest/v1/staff?email=eq." + encodeURIComponent(id), { method: "DELETE", write: true }).then(function () { return staffFn("remove", id).catch(function () { msg("Access removed, but the login itself could not be deleted. It has no access.", true); }); }).then(function () { if (!$("msg").classList.contains("err")) msg("Removed."); loadAll(); }).catch(function (er) { msg(er.message, true); }); }
+    else if (act === "actives") { var st = state.staff.filter(function (x) { return x.email === id; })[0]; patchStaff(st.email, { active: !st.active }, st.active ? "Frozen. They can no longer sign in, and nothing was deleted." : "Unfrozen. They can sign in again."); }
+    else if (act === "dels") { var rm = state.staff.filter(function (x) { return x.email === id; })[0]; if (rm) openRemoveForm(rm); }
+    else if (act === "restores") { patchStaff(id, { active: true, left_at: null }, "Welcome back. They can sign in again with their old password, or you can set a new one in Edit access."); }
     else if (act === "edit") openRoomForm(state.rooms.filter(function (x) { return String(x.id) === id; })[0]);
     else if (act === "toggle") { var r = state.rooms.filter(function (x) { return String(x.id) === id; })[0]; patchRoom(r.id, { published: !r.published }, r.published ? "Room hidden from the website." : "Room is now visible."); }
     else if (act === "del") deleteRoom(state.rooms.filter(function (x) { return String(x.id) === id; })[0]);
@@ -809,7 +834,8 @@
       SWITCHES.forEach(function (x) { body[x[0]] = owner ? !!p[x[0]] : f[x[0]].checked; });
       var email = isNew ? f.email.value.trim().toLowerCase() : s.email;
       if (isNew) { body.email = email; body.active = true; }
-      if (isNew && state.staff.some(function (x) { return x.email === email; })) { msg("That email is already on the list.", true); return; }
+      var already = state.staff.filter(function (x) { return x.email === email; })[0];
+      if (isNew && already) { msg(already.left_at ? "That person left the team. Use Bring back in the Left the team list." : "That email is already on the team.", true); return; }
       if (pw && pw.length < 8) { msg("The password needs at least 8 characters.", true); return; }
       $("saveBtn").disabled = true;
       var steps;

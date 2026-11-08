@@ -25,10 +25,19 @@
   .chip.st-new{background:#fbe7d7;color:#8f3f12} .chip.st-contacted{background:#e3f0f2;color:var(--brand-d)} .chip.st-viewing{background:#efe8d3;color:#6b5314}
   .chip.st-reserved{background:#e6e1f3;color:#47337a} .chip.st-rented{background:#dff1e8;color:var(--ok)} .chip.st-lost{background:#ececec;color:#555}
   .item.lead a{color:var(--brand)}
+  .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:0 0 12px}
+  .tile{display:grid;gap:2px;text-align:start;background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px;font:inherit;cursor:pointer;color:var(--ink)}
+  .tile b{font-size:30px;line-height:1.1} .tile span{font-size:13.5px;color:var(--muted)}
+  .tile.hot{border-color:#b4531a;background:#fdf3ea} .tile.hot b{color:#8f3f12}
+  .todo{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px dashed var(--line)} .todo:last-child{border-bottom:0}
+  .bar-row{display:grid;grid-template-columns:90px 1fr 34px;gap:10px;align-items:center;padding:4px 0;font-size:14px}
+  .bar-row i{display:block;height:10px;border-radius:6px;background:var(--brand)} .bar-row b{text-align:end}
+  .spark{display:flex;gap:10px;align-items:flex-end;min-height:100px;padding-top:6px}
+  .spark div{flex:1;display:grid;justify-items:center;gap:2px;font-size:12px;color:var(--muted)} .spark i{display:block;width:100%;max-width:34px;border-radius:6px 6px 2px 2px;background:var(--brand)} .spark b{color:var(--ink)}
   .notes{margin-top:10px;border-top:1px dashed var(--line);padding-top:8px}
   .note{padding:6px 0;border-bottom:1px solid #f0ece2} .note.sys{color:var(--muted);font-size:13.5px}
   .linkbtn{background:none;border:0;padding:4px 0;font:inherit;font-size:14px;color:var(--brand);text-decoration:underline;cursor:pointer}
-  .linkbtn[hidden],.tab[hidden]{display:none}
+  .linkbtn[hidden],.tab[hidden],#addBtn[hidden],#logout[hidden]{display:none}
   .row2{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
   .btn.sec{background:#fff;color:var(--brand);border:1px solid var(--brand)}
   .btn.sec:hover{background:var(--brand-soft)}
@@ -94,11 +103,14 @@
 
   <section id="panel" hidden>
     <div class="tabs">
-      <button class="tab on" data-tab="rooms" type="button">Rooms</button>
+      <button class="tab on" data-tab="home" type="button">Home</button>
+      <button class="tab" data-tab="rooms" type="button">Rooms</button>
       <button class="tab" data-tab="requests" type="button">Leads</button>
+      <button class="tab" data-tab="owners" type="button">Owners</button>
       <button class="tab" data-tab="centers" type="button">Language centers</button>
       <button class="tab" data-tab="suggest" type="button">Center suggestions</button>
       <button class="tab" data-tab="staff" type="button">Staff</button>
+      <button class="tab" data-tab="history" type="button">History</button>
       <button id="addBtn" class="btn sm grow" type="button">+ Add room</button>
     </div>
     <div id="list"></div>

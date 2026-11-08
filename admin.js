@@ -2,7 +2,7 @@
   "use strict";
   var SB = window.QAREEB_SUPABASE, KEY = "qareeb-admin-session";
   var $ = function (id) { return document.getElementById(id); };
-  var state = { tab: "rooms", rooms: [], centers: [], requests: [], suggestions: [], staff: [], notes: {}, team: [] };
+  var state = { tab: "home", rooms: [], centers: [], requests: [], suggestions: [], staff: [], notes: {}, team: [], owners: [], activity: [] };
   var session = null, access = null;
   var ROLES = {
     owner:      { label: "Owner",            note: "Everything, including staff and their access." },
@@ -69,7 +69,7 @@
   function showPanel() {
     $("loginBox").hidden = true; $("panel").hidden = false; $("logout").hidden = false;
     $("who").textContent = (access.name || access.email) + " · " + (ROLES[access.role] ? ROLES[access.role].label : access.role);
-    var tabs = { requests: can("leads_view"), suggest: can("centers_edit"), staff: can("staff_manage") };
+    var tabs = { requests: can("leads_view"), suggest: can("centers_edit"), staff: can("staff_manage"), owners: can("rooms_edit") || can("leads_view"), history: can("staff_manage") };
     document.querySelectorAll(".tab").forEach(function (b) { b.hidden = tabs[b.dataset.tab] === false; });
     loadAll();
   }
@@ -156,8 +156,10 @@
       can("centers_edit") ? api("/rest/v1/center_requests?select=*&order=created_at.desc&limit=500").catch(none) : none(),
       can("staff_manage") ? api("/rest/v1/staff?select=*&order=created_at") : none(),
       can("leads_view") ? api("/rest/v1/lead_notes?select=*&order=created_at&limit=3000").catch(none) : none(),
-      can("leads_view") ? api("/rest/v1/rpc/staff_directory", { method: "POST", body: {} }).catch(none) : none()
-    ]).then(function (r) { state.rooms = r[0] || []; state.centers = r[1] || []; state.requests = r[2] || []; state.suggestions = r[3] || []; state.staff = r[4] || []; state.team = r[6] || []; groupNotes(r[5] || []); render(); })
+      can("leads_view") ? api("/rest/v1/rpc/staff_directory", { method: "POST", body: {} }).catch(none) : none(),
+      (can("rooms_edit") || can("leads_view")) ? api("/rest/v1/owners?select=*&order=name").catch(none) : none(),
+      can("staff_manage") ? api("/rest/v1/activity_log?select=*&order=at.desc&limit=300").catch(none) : none()
+    ]).then(function (r) { state.rooms = r[0] || []; state.centers = r[1] || []; state.requests = r[2] || []; state.suggestions = r[3] || []; state.staff = r[4] || []; state.team = r[6] || []; state.owners = r[7] || []; state.activity = r[8] || []; groupNotes(r[5] || []); render(); })
       .catch(function (e) { msg("Could not load data: " + e.message, true); });
   }
 
@@ -184,10 +186,102 @@
     document.querySelectorAll(".tab").forEach(function (b) { b.classList.toggle("on", b.dataset.tab === state.tab); });
     var newN = state.requests.filter(function (r) { return r.status === "new"; }).length, lt = document.querySelector('[data-tab=requests]');
     if (lt) lt.textContent = "Leads" + (newN ? " (" + newN + " new)" : "");
-    $("addBtn").textContent = state.tab === "centers" ? "+ Add center" : state.tab === "staff" ? "+ Add staff member" : "+ Add room";
-    $("addBtn").hidden = state.tab === "requests" || state.tab === "suggest" ||
-      (state.tab === "rooms" && !can("rooms_edit")) || (state.tab === "centers" && !can("centers_edit"));
-    if (state.tab === "rooms") renderRooms(); else if (state.tab === "requests") renderRequests(); else if (state.tab === "suggest") renderSuggestions(); else if (state.tab === "staff") renderStaff(); else renderCenters();
+    $("addBtn").textContent = state.tab === "centers" ? "+ Add center" : state.tab === "staff" ? "+ Add staff member" : state.tab === "owners" ? "+ Add owner" : "+ Add room";
+    $("addBtn").hidden = state.tab === "home" || state.tab === "history" || state.tab === "requests" || state.tab === "suggest" ||
+      ((state.tab === "rooms" || state.tab === "owners") && !can("rooms_edit")) || (state.tab === "centers" && !can("centers_edit"));
+    if (state.tab === "home") renderHome(); else if (state.tab === "rooms") renderRooms(); else if (state.tab === "requests") renderRequests(); else if (state.tab === "suggest") renderSuggestions(); else if (state.tab === "staff") renderStaff();
+    else if (state.tab === "owners") renderOwners(); else if (state.tab === "history") renderHistory(); else renderCenters();
+  }
+  function ownerName(id) { var o = state.owners.filter(function (x) { return x.id === id; })[0]; return o ? o.name : ""; }
+  function when(t) { return new Date(t).toLocaleString([], { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }); }
+
+  // ------------------------------------------------------------ home (what needs attention)
+  function renderHome() {
+    var now = new Date(), blocks = [], hour = 3600 * 1000;
+    var live = state.rooms.filter(function (r) { return r.published; });
+    var holds = state.rooms.filter(function (r) { return r.status === "reserved" && r.reserved_until && new Date(r.reserved_until) - now < 24 * hour; });
+    var tile = function (n, label, go, hot) { return '<button type="button" class="tile' + (hot && n ? " hot" : "") + '" data-go="' + go + '"><b>' + n + "</b><span>" + label + "</span></button>"; };
+    var tiles = "";
+    if (can("leads_view")) {
+      var newN = state.requests.filter(function (r) { return r.status === "new"; }).length, dueN = state.requests.filter(isDue).length;
+      tiles += tile(newN, "New leads", "requests:new", true) + tile(dueN, "Follow-ups due", "requests:due", true);
+    }
+    tiles += tile(state.rooms.filter(function (r) { return r.status === "available" && r.published; }).length, "Rooms available now", "rooms", false);
+    tiles += tile(holds.length, "Holds ending within 24 hours", "rooms", true);
+    var todo = [];
+    if (can("leads_view")) {
+      var old = state.requests.filter(function (r) { return r.status === "new" && now - new Date(r.created_at) > 24 * hour; }).length;
+      if (old) todo.push(["requests:new", old + " lead" + (old === 1 ? " has" : "s have") + " been waiting more than a day without a reply."]);
+      state.requests.filter(isDue).slice(0, 5).forEach(function (r) { var room = roomOf(r); todo.push(["requests:due", "Follow up with " + r.name + (room ? " about " + room.title_en : "") + " (was due " + r.follow_up + ")."]); });
+    }
+    holds.slice(0, 5).forEach(function (r) { todo.push(["rooms", (new Date(r.reserved_until) < now ? "Hold expired on " : "Hold ends soon for ") + r.title_en + ". Mark it Rented or Available."]); });
+    var unver = live.filter(function (r) { return !(r.v_video && r.v_owner); }).length;
+    if (unver) todo.push(["rooms", unver + " visible room" + (unver === 1 ? " is" : "s are") + " not verified yet."]);
+    var nophoto = live.filter(function (r) { return !(r.photos && r.photos.length); }).length;
+    if (nophoto) todo.push(["rooms", nophoto + " visible room" + (nophoto === 1 ? " has" : "s have") + " no photos."]);
+    if (can("rooms_edit") || can("leads_view")) {
+      var noowner = state.rooms.filter(function (r) { return !r.owner_id; }).length;
+      if (noowner) todo.push(["owners", noowner + " room" + (noowner === 1 ? " has" : "s have") + " no owner linked."]);
+    }
+    var funnel = "";
+    if (can("leads_view") && state.requests.length) {
+      var counts = {}; state.requests.forEach(function (r) { counts[r.status] = (counts[r.status] || 0) + 1; });
+      var max = Math.max.apply(null, STATUSES.map(function (s) { return counts[s[0]] || 0; }).concat([1]));
+      funnel = '<div class="item" style="display:block"><h3>Leads by status</h3>' + STATUSES.map(function (s) {
+        var n = counts[s[0]] || 0; return '<div class="bar-row"><span>' + s[1] + '</span><i style="width:' + Math.max(2, Math.round(n / max * 100)) + '%"></i><b>' + n + "</b></div>";
+      }).join("") + "</div>";
+      var days = [];
+      for (var d = 6; d >= 0; d--) { var dt = new Date(now - d * 24 * hour), key = dt.getFullYear() + "-" + String(dt.getMonth() + 1).padStart(2, "0") + "-" + String(dt.getDate()).padStart(2, "0"); days.push({ key: key, label: dt.toLocaleDateString([], { weekday: "short" }), n: 0 }); }
+      state.requests.forEach(function (r) { var c = new Date(r.created_at), key = c.getFullYear() + "-" + String(c.getMonth() + 1).padStart(2, "0") + "-" + String(c.getDate()).padStart(2, "0"); days.forEach(function (x) { if (x.key === key) x.n++; }); });
+      var dmax = Math.max.apply(null, days.map(function (x) { return x.n; }).concat([1]));
+      funnel += '<div class="item" style="display:block"><h3>Requests, last 7 days</h3><div class="spark">' + days.map(function (x) { return '<div><i style="height:' + Math.max(3, Math.round(x.n / dmax * 60)) + 'px"></i><b>' + x.n + "</b><span>" + x.label + "</span></div>"; }).join("") + "</div></div>";
+    }
+    $("list").innerHTML = '<div class="tiles">' + tiles + "</div>" +
+      '<div class="item" style="display:block"><h3>Needs attention</h3>' + (todo.length ? todo.map(function (t) { return '<div class="todo"><span>' + esc(t[1]) + '</span><button type="button" class="btn sec sm" data-go="' + t[0] + '">Open</button></div>'; }).join("") : '<p class="meta2" style="margin:6px 0 0">Nothing needs attention right now.</p>') + "</div>" + funnel;
+  }
+
+  // ------------------------------------------------------------ owners directory
+  function renderOwners() {
+    var edit = can("rooms_edit");
+    if (!state.owners.length) { $("list").innerHTML = '<p class="meta2">No owners yet.' + (edit ? ' Click "Add owner", then choose the owner when you add or edit a room.' : "") + "</p>"; return; }
+    $("list").innerHTML = state.owners.map(function (o) {
+      var rooms = state.rooms.filter(function (r) { return r.owner_id === o.id; });
+      var digits = String(o.phone || "").replace(/\D/g, ""), phone = digits.length >= 8 ? '<a href="https://wa.me/' + digits + '" target="_blank" rel="noopener">' + esc(o.phone) + "</a>" : esc(o.phone || "no phone yet");
+      return '<div class="item" data-id="' + o.id + '"><div class="main"><h3>' + esc(o.name) + '</h3><div class="meta2">' + phone + " · " + rooms.length + " room" + (rooms.length === 1 ? "" : "s") + (rooms.length ? ": " + rooms.map(function (r) { return esc(r.title_en); }).join(", ") : "") + "</div>" +
+        '<div style="margin-top:6px"><span class="chip ' + (o.id_checked ? "ok" : "") + '">' + (o.id_checked ? "Identity checked" : "Identity not checked") + "</span></div>" +
+        (o.notes ? '<p class="help" style="margin-top:6px;white-space:pre-wrap">' + esc(o.notes) + "</p>" : "") +
+        (edit ? '<div class="acts"><button class="btn sm" data-act="edito" type="button">Edit</button>' + (can("rooms_delete") ? '<button class="btn danger sm" data-act="delo" type="button">Delete</button>' : "") + "</div>" : "") + "</div></div>";
+    }).join("");
+  }
+  function openOwnerForm(o) {
+    var isNew = !o; o = o || { name: "", phone: "", notes: "", id_checked: false };
+    $("dform").innerHTML = '<form id="of"><h2>' + (isNew ? "Add an owner" : "Edit owner") + "</h2>" +
+      '<div class="fld"><label for="o-n">Name</label><input id="o-n" name="name" required maxlength="100" value="' + esc(o.name) + '"></div>' +
+      '<div class="fld"><label for="o-p">Phone or WhatsApp (with country code)</label><input id="o-p" name="phone" maxlength="40" value="' + esc(o.phone) + '" placeholder="+60 12 345 6789"></div>' +
+      chk("id_checked", "Identity checked (ID or ownership document seen)", o.id_checked) +
+      '<div class="fld"><label for="o-no">Private notes</label><textarea id="o-no" name="notes" maxlength="2000">' + esc(o.notes) + '</textarea><p class="help">Only staff see this. Never shown to students.</p></div>' +
+      '<div class="foot2"><button type="button" class="btn sec" id="cancelBtn">Cancel</button><button type="submit" class="btn" id="saveBtn">Save</button></div></form>';
+    dlg.showModal(); $("cancelBtn").onclick = closeDlg;
+    $("of").onsubmit = function (e) {
+      e.preventDefault(); var f = $("of"), body = { name: f.name.value.trim(), phone: f.phone.value.trim(), notes: f.notes.value.trim(), id_checked: f.id_checked.checked };
+      $("saveBtn").disabled = true;
+      (isNew ? api("/rest/v1/owners", { method: "POST", body: body, write: true }) : api("/rest/v1/owners?id=eq." + o.id, { method: "PATCH", body: body, write: true }))
+        .then(function () { closeDlg(); msg("Saved."); return loadAll(); }).catch(function (er) { msg(er.message, true); $("saveBtn").disabled = false; });
+    };
+  }
+
+  // ------------------------------------------------------------ history (owners only)
+  var histFilter = "all";
+  var ENT = { listings: "Room", centers: "Language center", owners: "Owner", staff: "Staff" };
+  function renderHistory() {
+    var chipB = function (v, label) { return '<button type="button" class="fchip' + (histFilter === v ? " on" : "") + '" data-act="hfilter" data-v="' + v + '">' + label + "</button>"; };
+    var rows = state.activity.filter(function (a) { return histFilter === "all" || a.entity === histFilter; });
+    $("list").innerHTML = '<div class="fbar">' + chipB("all", "Everything") + Object.keys(ENT).map(function (k) { return chipB(k, ENT[k] + "s"); }).join("") + "</div>" +
+      '<p class="help" style="margin:0 0 10px">The latest 300 changes. Nobody can edit or delete this list.</p>' +
+      (rows.length ? rows.map(function (a) {
+        return '<div class="item"><div class="main"><div class="meta2">' + esc(when(a.at)) + " · " + esc(a.actor === "website" ? "website (a student)" : personName(a.actor)) + '</div><div><span class="chip ' + (a.action === "delete" ? "off" : a.action === "insert" ? "ok" : "") + '">' + esc(a.action === "insert" ? "added" : a.action === "delete" ? "deleted" : "changed") + "</span> <b>" + esc(ENT[a.entity] || a.entity) + "</b> " + esc(a.label) + "</div>" +
+          (a.summary ? '<div class="meta2" style="margin-top:2px">' + esc(a.summary) + "</div>" : "") + "</div></div>";
+      }).join("") : '<p class="meta2">Nothing recorded yet.</p>');
   }
   function renderStaff() {
     var intro = '<p class="meta2" style="margin:0 0 12px">Add a person with their email, a role and a password, then give them those details. They log in on this page with them. Use <b>Edit access</b> to change their role, their switches or their password, and <b>Switch off</b> to stop access at any time.</p>';
@@ -211,7 +305,7 @@
         '<button class="btn sm" data-act="edit" type="button">Edit</button>';
       if (can("rooms_delete")) acts += '<button class="btn danger sm" data-act="del" type="button">Delete</button>';
       return '<div class="item" data-id="' + l.id + '"><div class="thumb" style="' + thumbStyle(l) + '">' + ((l.photos && l.photos.length) ? "" : "🏠") + "</div>" +
-        '<div class="main"><h3>' + esc(l.title_en) + '</h3><div class="meta2">RM ' + esc(l.price) + " per month · " + esc(l.area) + " · " + esc(l.type) + " · min. " + esc(l.min_stay) + " mo" + (can("leads_view") ? " · " + asked + " request" + (asked === 1 ? "" : "s") : "") + " · " + esc(l.status) + "</div>" +
+        '<div class="main"><h3>' + esc(l.title_en) + '</h3><div class="meta2">RM ' + esc(l.price) + " per month · " + esc(l.area) + " · " + esc(l.type) + " · min. " + esc(l.min_stay) + " mo" + (can("leads_view") ? " · " + asked + " request" + (asked === 1 ? "" : "s") : "") + " · " + esc(l.status) + (ownerName(l.owner_id) ? " · owner: " + esc(ownerName(l.owner_id)) : "") + "</div>" +
         "<div style=\"margin-top:6px\">" + chips(l) + "</div>" +
         (acts ? '<div class="acts">' + acts + "</div>" : "") + "</div></div>";
     }).join("");
@@ -324,9 +418,22 @@
 
   // ------------------------------------------------------------ list actions
   $("list").onclick = function (e) {
+    var g = e.target.closest("[data-go]");
+    if (g) {   // shortcuts on the Home page
+      var gp = g.dataset.go.split(":");
+      state.tab = gp[0];
+      if (gp[0] === "requests") { lf.mine = false; lf.status = gp[1] === "new" ? "new" : "all"; lf.due = gp[1] === "due"; lf.q = ""; }
+      render(); window.scrollTo(0, 0); return;
+    }
     var b = e.target.closest("[data-act]"); if (!b || b.tagName === "SELECT") return;
     var item = b.closest(".item"), id = item ? item.dataset.id : "", act = b.dataset.act;
-    if (act === "lfilter") { lf.status = b.dataset.v; render(); }
+    if (act === "hfilter") { histFilter = b.dataset.v; render(); }
+    else if (act === "edito") openOwnerForm(state.owners.filter(function (x) { return String(x.id) === id; })[0]);
+    else if (act === "delo") {
+      var ow = state.owners.filter(function (x) { return String(x.id) === id; })[0];
+      if (confirm('Delete owner "' + ow.name + '"? Their rooms stay, but will no longer be linked to an owner.')) api("/rest/v1/owners?id=eq." + encodeURIComponent(id), { method: "DELETE", write: true }).then(function () { msg("Deleted."); loadAll(); }).catch(function (er) { msg(er.message, true); });
+    }
+    else if (act === "lfilter") { lf.status = b.dataset.v; render(); }
     else if (act === "lmine") { lf.mine = !lf.mine; render(); }
     else if (act === "ldue") { lf.due = !lf.due; render(); }
     else if (act === "lnotes") { openNotes[id] = !openNotes[id]; renderLeadCards(); }
@@ -380,7 +487,7 @@
   }
 
   document.querySelectorAll(".tab").forEach(function (b) { b.onclick = function () { state.tab = b.dataset.tab; render(); }; });
-  $("addBtn").onclick = function () { if (state.tab === "centers") openCenterForm(null); else if (state.tab === "staff") openStaffForm(null); else openRoomForm(null); };
+  $("addBtn").onclick = function () { if (state.tab === "centers") openCenterForm(null); else if (state.tab === "staff") openStaffForm(null); else if (state.tab === "owners") openOwnerForm(null); else openRoomForm(null); };
   // Creating / re-passwording / deleting a LOGIN needs a secret key, so a small server-side function does it (owners only).
   function staffFn(action, email, password) {
     return token().then(function (tk) {
@@ -538,7 +645,8 @@
       '<div class="fld"><span>Status</span>' + sel("status", [["available", "Available"], ["reserved", "Reserved"], ["taken", "Rented"]], r.status) + "</div>" +
       '<div class="fld"><label for="f-beds">Bedrooms</label><input id="f-beds" name="beds" type="number" min="0" max="20" required value="' + esc(r.beds) + '"></div>' +
       '<div class="fld"><label for="f-min">Minimum stay (months)</label><input id="f-min" name="min_stay" type="number" min="1" max="60" required value="' + esc(r.min_stay) + '"></div>' +
-      '<div class="fld"><span>Who lives here</span>' + sel("gender", [["mixed", "Mixed"], ["women", "Women only"], ["men", "Men only"], ["family", "Families"]], r.gender) + "</div></div>" +
+      '<div class="fld"><span>Who lives here</span>' + sel("gender", [["mixed", "Mixed"], ["women", "Women only"], ["men", "Men only"], ["family", "Families"]], r.gender) + "</div>" +
+      '<div class="fld"><span>Owner (private, staff only)</span>' + sel("owner_id", [["", "No owner linked"]].concat(state.owners.map(function (o) { return [o.id, o.name]; })), r.owner_id == null ? "" : r.owner_id) + "</div></div>" +
       chk("furnished", "Furnished", r.furnished) + chk("bills", "Bills included in the price", r.bills) + "</fieldset>" +
       '<fieldset><legend>Text</legend>' +
       '<div class="fld"><label for="f-te">Title (English)</label><input id="f-te" name="title_en" required maxlength="120" value="' + esc(r.title_en) + '"></div>' +
@@ -648,7 +756,8 @@
       reserved_until: d.get("status") === "reserved" ? (old.reserved_until || null) : null,
       deposit_months: num(d.get("deposit_months")), advance_months: num(d.get("advance_months")), utility_deposit: num(d.get("utility_deposit")), agreement_provided: f.agreement_provided.checked,
       station_name: (d.get("station_name") || "").trim() || null, station_type: d.get("station_type") || null,
-      station_min: num(d.get("station_min")), bus_min: num(d.get("bus_min")), amenities: d.getAll("amen")
+      station_min: num(d.get("station_min")), bus_min: num(d.get("bus_min")), amenities: d.getAll("amen"),
+      owner_id: num(d.get("owner_id"))
     };
     var req = isNew ? api("/rest/v1/listings", { method: "POST", body: body, write: true }) : api("/rest/v1/listings?id=eq." + old.id, { method: "PATCH", body: body, write: true });
     $("saveBtn").disabled = true;

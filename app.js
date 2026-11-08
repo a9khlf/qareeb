@@ -22,7 +22,7 @@
       hiw4t: "Move in", hiw4d: "We confirm everything on WhatsApp and send you the deposit details.",
       fCampus: "My language center", campusPh: "Type your center, e.g. Britannia",
       fWalk: "Walking distance to my center", walkAny: "Any distance", walk10: "Up to 10 min", walk15: "Up to 15 min", walk20: "Up to 20 min", walk30: "Up to 30 min",
-      fArea: "Area", fType: "Type of place", fPrice: "Maximum price (RM per month)", fSort: "Sort by",
+      fArea: "Area", fType: "Type of place", fWho: "Who lives here", fPrice: "Maximum price (RM per month)", fSort: "Sort by",
       fStay: "Minimum stay", stayAny: "Any", stay1: "1 month", stay3: "Up to 3 months", stay6: "Up to 6 months",
       all: "All", any: "Any", room: "Room", studio: "Studio", apartment: "Apartment",
       sNear: "Closest to my center", sCheap: "Lowest price",
@@ -97,7 +97,7 @@
       hiw4t: "انتقل إلى سكنك", hiw4d: "نؤكد كل شيء عبر واتساب ونرسل لك تفاصيل العربون.",
       fCampus: "معهد اللغة الذي أدرس فيه", campusPh: "اكتب اسم معهدك، مثلاً: بريتانيا",
       fWalk: "مسافة المشي إلى معهدي", walkAny: "أي مسافة", walk10: "حتى ١٠ دقائق", walk15: "حتى ١٥ دقيقة", walk20: "حتى ٢٠ دقيقة", walk30: "حتى ٣٠ دقيقة",
-      fArea: "المنطقة", fType: "نوع السكن", fPrice: "أعلى سعر (رينغيت ماليزي شهرياً)", fSort: "ترتيب النتائج",
+      fArea: "المنطقة", fType: "نوع السكن", fWho: "من يسكن هنا", fPrice: "أعلى سعر (رينغيت ماليزي شهرياً)", fSort: "ترتيب النتائج",
       fStay: "الحد الأدنى للإقامة", stayAny: "أي مدة", stay1: "شهر واحد", stay3: "حتى ٣ أشهر", stay6: "حتى ٦ أشهر",
       all: "الكل", any: "أي سعر", room: "غرفة", studio: "استوديو", apartment: "شقة",
       sNear: "الأقرب إلى معهدي", sCheap: "الأقل سعراً",
@@ -256,10 +256,10 @@
   }
 
   function filtered() {
-    var area = $("area").value, type = $("type").value, max = +$("price").value || 1e9, only = $("onlyAvail").checked, ver = $("onlyVerified").checked, stay = +$("stay").value, wmax = campus ? +$("walkMax").value : 0;
+    var area = $("area").value, type = $("type").value, who = $("gender").value, max = +$("price").value || 1e9, only = $("onlyAvail").checked, ver = $("onlyVerified").checked, stay = +$("stay").value, wmax = campus ? +$("walkMax").value : 0;
     var out = LISTINGS.map(function (l) { return { l: l, tr: campus ? trip(l, campus) : null }; }).filter(function (x) {
       var l = x.l;
-      return (!area || l.area === area) && (!type || l.type === type) && l.price <= max && (!only || l.status === "available") && (!ver || isVerified(l)) && (!stay || l.minStay <= stay) && (!wmax || x.tr.walk <= wmax);
+      return (!area || l.area === area) && (!type || l.type === type) && (!who || (l.gender || "mixed") === who) && l.price <= max && (!only || l.status === "available") && (!ver || isVerified(l)) && (!stay || l.minStay <= stay) && (!wmax || x.tr.walk <= wmax);
     });
     var s = $("sort").value;
     out.sort(function (a, b) { return s === "near" && campus ? a.tr.km - b.tr.km : a.l.price - b.l.price; });
@@ -316,7 +316,8 @@
   function card(x) {
     var l = x.l;
     var chips = (x.tr ? '<span class="walk ' + (x.tr.walk <= 15 ? "near" : "") + '">' + tripText(x.tr) + "</span>" : "") +
-      (isVerified(l) ? '<span class="walk gold">✔ ' + t("verified") + "</span>" : "");
+      (isVerified(l) ? '<span class="walk gold">✔ ' + t("verified") + "</span>" : "") +
+      ((l.gender && l.gender !== "mixed") ? '<span class="walk who">' + t("g_" + l.gender) + "</span>" : "");
     var buttons = l.status !== "available" ? "" : canReserve(l)
       ? '<button type="button" class="btn wa" data-res="' + l.id + '">⚡ ' + t("reserve") + '</button><button type="button" class="btn alt" data-wa="' + l.id + '">💬 ' + t("cardWa") + "</button>"
       : '<button type="button" class="btn wa" data-wa="' + l.id + '">💬 ' + t("cardWa") + "</button>";
@@ -637,7 +638,7 @@
   // events
   // ---------------------------------------------------------------
   $("langBtn").onclick = function () { lang = lang === "ar" ? "en" : "ar"; try { localStorage.setItem("qareeb-lang", lang); } catch (e) {} applyLang(); };
-  ["walkMax", "area", "type", "price", "stay", "sort", "onlyAvail", "onlyVerified"].forEach(function (id) { $(id).onchange = render; });
+  ["walkMax", "area", "type", "gender", "price", "stay", "sort", "onlyAvail", "onlyVerified"].forEach(function (id) { $(id).onchange = render; });
   document.querySelectorAll(".vbtn").forEach(function (b) { b.onclick = function () { setView(b.dataset.view); }; });
   $("grid").onclick = function (e) {
     var ar = e.target.closest("[data-arrow]");

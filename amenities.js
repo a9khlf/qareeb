@@ -14,5 +14,8 @@ window.QAREEB_AMENITIES = [
   { key: "supermarket", icon: "🛒", en: "Supermarket nearby",        ar: "سوبرماركت قريب" },
   { key: "mall",        icon: "🏬", en: "Shopping mall nearby",      ar: "مركز تسوق قريب" },
   { key: "restaurants", icon: "🍽️", en: "Restaurants nearby",        ar: "مطاعم قريبة" },
-  { key: "pharmacy",    icon: "💊", en: "Pharmacy or clinic nearby", ar: "صيدلية أو عيادة قريبة" }
+  { key: "pharmacy",    icon: "💊", en: "Pharmacy or clinic nearby", ar: "صيدلية أو عيادة قريبة" },
+  { key: "qibla",       icon: "🕋", en: "Qibla direction marked",   ar: "اتجاه القبلة محدد" },
+  { key: "prayerspace", icon: "🕌", en: "Prayer space",            ar: "مكان للصلاة" },
+  { key: "halalkitchen",icon: "🥘", en: "Halal kitchen (no pork or alcohol at home)", ar: "مطبخ حلال (دون لحم الخنزير أو الكحول في المنزل)" }
 ];

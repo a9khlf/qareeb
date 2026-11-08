@@ -73,12 +73,43 @@
   .foot2{display:flex;gap:10px;justify-content:flex-end;position:sticky;bottom:-18px;background:#fff;padding:12px 0 6px}
   .count-row{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px dashed var(--line)}
   @media(max-width:560px){.item{flex-direction:column}.item .thumb{width:100%;flex-basis:auto;height:120px}}
+  /* workspace: left menu + content */
+  .shell{display:grid;grid-template-columns:232px minmax(0,1fr);gap:28px;align-items:start;margin-top:22px}
+  .side{position:sticky;top:78px;background:#fff;border:1px solid var(--line);border-radius:16px;padding:10px}
+  .side .tabs{display:grid;gap:2px;margin:0}
+  .side .tab{border:0;background:transparent;border-radius:10px;text-align:start;padding:10px 12px;font-weight:600;color:var(--ink)}
+  .side .tab:hover{background:var(--brand-soft)}
+  .side .tab.on{background:var(--brand);color:#fff}
+  .sidelink{display:block;margin:8px 4px 2px;padding:10px 8px 4px;font-size:14px;color:var(--brand);border-top:1px solid var(--line)}
+  .contenthead{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 14px;min-height:40px}
+  .contenthead h1{margin:0;font-size:clamp(22px,3vw,28px);letter-spacing:-.01em}
+  #addBtn[hidden]{display:none}
+  @media(max-width:860px){
+    .shell{grid-template-columns:minmax(0,1fr);gap:14px;margin-top:14px}
+    .side{position:static;padding:6px}
+    .side .tabs{display:flex;gap:6px;overflow-x:auto}
+    .side .tab{white-space:nowrap}
+    .sidelink{display:none}
+  }
+  /* student site page */
+  .sharecard{background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px;margin-bottom:14px}
+  .sharecard h2{margin:0 0 4px;font-size:18px}
+  .linkrow{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+  .linkrow input{flex:1;min-width:220px;padding:10px;border:1px solid var(--line);border-radius:10px;font:inherit;background:#faf8f3;color:var(--ink)}
+  .qrbox{display:flex;gap:18px;align-items:center;flex-wrap:wrap}
+  .qrbox .qr{background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px;line-height:0}
+  .qrbox .qr svg{width:160px;height:160px}
+  .centerlink{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:9px 0;border-bottom:1px dashed var(--line)}
+  .centerlink:last-child{border-bottom:0}
+  .centerlink span{min-width:0;flex:1}
+  .btn.wa{background:#1d6f42} .btn.wa:hover{background:#155534}
+  .linkrow .btn,.centerlink .btn{display:inline-block;width:auto;flex:0 0 auto;text-align:center;box-shadow:none}
 </style>
 </head>
 <body>
 <header class="top">
   <div class="wrap bar">
-    <span class="logo"><img class="logo-full" src="logo-header.png" alt="Qareeb" width="394" height="132"><span class="adm">Admin</span></span>
+    <span class="logo"><img class="logo-full" src="logo-header.png" alt="Qareeb" width="394" height="132"><span class="adm">Staff</span></span>
     <div><span id="who" class="meta2" style="margin-inline-end:10px"></span><button id="logout" class="lang" type="button" hidden>Log out</button></div>
   </div>
 </header>
@@ -102,23 +133,32 @@
   </section>
 
   <section id="panel" hidden>
-    <div class="tabs">
-      <button class="tab on" data-tab="home" type="button">Home</button>
-      <button class="tab" data-tab="rooms" type="button">Rooms</button>
-      <button class="tab" data-tab="requests" type="button">Leads</button>
-      <button class="tab" data-tab="owners" type="button">Owners</button>
-      <button class="tab" data-tab="centers" type="button">Language centers</button>
-      <button class="tab" data-tab="suggest" type="button">Center suggestions</button>
-      <button class="tab" data-tab="staff" type="button">Staff</button>
-      <button class="tab" data-tab="history" type="button">History</button>
-      <button id="addBtn" class="btn sm grow" type="button">+ Add room</button>
+    <div class="shell">
+      <nav class="side" aria-label="Staff menu">
+        <div class="tabs">
+          <button class="tab on" data-tab="home" type="button">Home</button>
+          <button class="tab" data-tab="share" type="button">Student site</button>
+          <button class="tab" data-tab="rooms" type="button">Rooms</button>
+          <button class="tab" data-tab="requests" type="button">Leads</button>
+          <button class="tab" data-tab="owners" type="button">Owners</button>
+          <button class="tab" data-tab="centers" type="button">Language centers</button>
+          <button class="tab" data-tab="suggest" type="button">Center suggestions</button>
+          <button class="tab" data-tab="staff" type="button">Staff</button>
+          <button class="tab" data-tab="history" type="button">History</button>
+        </div>
+        <a class="sidelink" href="./" target="_blank" rel="noopener">View the student site ↗</a>
+      </nav>
+      <div class="content">
+        <div class="contenthead"><h1 id="pageTitle">Home</h1><button id="addBtn" class="btn sm" type="button">+ Add room</button></div>
+        <div id="list"></div>
+      </div>
     </div>
-    <div id="list"></div>
   </section>
 </main>
 
 <dialog id="dlg"><div id="dform" class="dform"></div></dialog>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <script src="config.js"></script>
 <script src="amenities.js"></script>
 <script src="admin.js"></script>

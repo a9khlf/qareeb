@@ -254,6 +254,9 @@ body{font-family:"Plus Jakarta Sans","IBM Plex Sans Arabic",system-ui,-apple-sys
 .owner .btn{background:var(--brand)}
 footer{margin-top:48px;padding:40px 0 44px;background:var(--midnight);color:#b9cdd2;font-size:15px}
 footer .foot-note{color:#d9bd7a}
+.stafflink{margin-top:18px;font-size:13px}
+.stafflink a{color:#8fb0b8;text-decoration:underline;text-underline-offset:3px}
+.stafflink a:hover{color:#fff}
 footer::before{content:"";display:block;width:56px;height:2px;margin:0 auto 22px;background:var(--gold)}
 .vbtn.on{background:var(--midnight);border-color:var(--midnight)}
 .sl-dots i.on{background:#fff}

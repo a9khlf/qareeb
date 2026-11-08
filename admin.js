@@ -187,13 +187,73 @@
     var newN = state.requests.filter(function (r) { return r.status === "new"; }).length, lt = document.querySelector('[data-tab=requests]');
     if (lt) lt.textContent = "Leads" + (newN ? " (" + newN + " new)" : "");
     $("addBtn").textContent = state.tab === "centers" ? "+ Add center" : state.tab === "staff" ? "+ Add staff member" : state.tab === "owners" ? "+ Add owner" : "+ Add room";
-    $("addBtn").hidden = state.tab === "home" || state.tab === "history" || state.tab === "requests" || state.tab === "suggest" ||
+    var TITLES = { home: "Home", share: "Student site", rooms: "Rooms", requests: "Leads", owners: "Owners", centers: "Language centers", suggest: "Center suggestions", staff: "Staff", history: "History" };
+    $("pageTitle").textContent = TITLES[state.tab] || "";
+    $("addBtn").hidden = state.tab === "home" || state.tab === "share" || state.tab === "history" || state.tab === "requests" || state.tab === "suggest" ||
       ((state.tab === "rooms" || state.tab === "owners") && !can("rooms_edit")) || (state.tab === "centers" && !can("centers_edit"));
-    if (state.tab === "home") renderHome(); else if (state.tab === "rooms") renderRooms(); else if (state.tab === "requests") renderRequests(); else if (state.tab === "suggest") renderSuggestions(); else if (state.tab === "staff") renderStaff();
+    if (state.tab === "home") renderHome(); else if (state.tab === "share") renderShare(); else if (state.tab === "rooms") renderRooms(); else if (state.tab === "requests") renderRequests(); else if (state.tab === "suggest") renderSuggestions(); else if (state.tab === "staff") renderStaff();
     else if (state.tab === "owners") renderOwners(); else if (state.tab === "history") renderHistory(); else renderCenters();
   }
   function ownerName(id) { var o = state.owners.filter(function (x) { return x.id === id; })[0]; return o ? o.name : ""; }
   function when(t) { return new Date(t).toLocaleString([], { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }); }
+
+  // ------------------------------------------------------------ student site (links to share)
+  var shareLang = "";   // "" = student's own language, "en", "ar"
+  function siteBase() { return location.origin + location.pathname.replace(/[^/]*$/, ""); }
+  function siteLink(extra) {
+    var q = [];
+    if (extra) q.push(extra);
+    if (shareLang) q.push("lang=" + shareLang);
+    return siteBase() + (q.length ? "?" + q.join("&") : "");
+  }
+  function shareText(url) {
+    return shareLang === "ar"
+      ? "تبحث عن سكن قريب من معهدك في كوالالمبور؟ اعثر على أقرب الغرف هنا: " + url
+      : "Looking for a room near your language center in Kuala Lumpur? Find the closest rooms here: " + url;
+  }
+  function waShare(url) { return "https://wa.me/?text=" + encodeURIComponent(shareText(url)); }
+  function qrSvg(url) {
+    if (typeof window.qrcode !== "function") return "";
+    var q = window.qrcode(0, "M"); q.addData(url); q.make();
+    return q.createSvgTag({ cellSize: 6, margin: 0, scalable: true });
+  }
+  function renderShare() {
+    var url = siteLink(), svg = qrSvg(url);
+    var centersList = state.centers.filter(function (c) { return c.grp === "center"; });
+    var opt = function (v, label) { return '<option value="' + v + '"' + (shareLang === v ? " selected" : "") + ">" + label + "</option>"; };
+    $("list").innerHTML =
+      '<div class="sharecard"><h2>Link for students</h2><p class="help">Send this to students, post it in your WhatsApp groups, or print the QR code on a poster. It opens the Qareeb website.</p>' +
+      '<div class="fld" style="max-width:320px;margin:12px 0 0"><label for="shareLang">Language the link opens in</label><select id="shareLang">' + opt("", "The student’s own choice") + opt("en", "English") + opt("ar", "العربية (Arabic)") + "</select></div>" +
+      '<div class="linkrow"><input id="shareUrl" readonly value="' + esc(url) + '" aria-label="Student link">' +
+      '<button class="btn sm" type="button" data-act="copyurl" data-url="' + esc(url) + '">Copy link</button>' +
+      '<a class="btn wa sm" target="_blank" rel="noopener" href="' + esc(waShare(url)) + '">Share on WhatsApp</a>' +
+      '<a class="btn sec sm" target="_blank" rel="noopener" href="' + esc(url) + '">Open</a></div>' +
+      (svg ? '<div class="qrbox"><div class="qr" id="qrBox">' + svg + '</div><div><button class="btn sec sm" type="button" data-act="qrdl">Download QR code</button><p class="help" style="margin-top:8px">Scanning it with a phone camera opens the same link.</p></div></div>' : '<p class="help">The QR code could not load (no internet connection to the code library).</p>') + "</div>" +
+      '<div class="sharecard"><h2>Link for one language center</h2><p class="help">Opens the website already set to that center, so the student sees the closest rooms straight away. Use it in a center’s WhatsApp group.</p>' +
+      (centersList.length ? centersList.map(function (c) {
+        var u = siteLink("center=" + encodeURIComponent(c.id));
+        return '<div class="centerlink"><span>' + esc(c.name_en) + '</span><button class="btn sec sm" type="button" data-act="copyurl" data-url="' + esc(u) + '">Copy link</button><a class="btn wa sm" target="_blank" rel="noopener" href="' + esc(waShare(u)) + '">WhatsApp</a></div>';
+      }).join("") : '<p class="meta2">No language centers yet.</p>') + "</div>";
+  }
+  function copyText(text) {
+    var done = function () { msg("Link copied."); };
+    var fallback = function () {
+      var ta = document.createElement("textarea"); ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0"; document.body.appendChild(ta); ta.select();
+      try { document.execCommand("copy"); done(); } catch (e) { msg("Could not copy. Select the link and copy it by hand.", true); }
+      document.body.removeChild(ta);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, fallback); else fallback();
+  }
+  function downloadQr() {
+    var svg = $("qrBox") && $("qrBox").querySelector("svg"); if (!svg) return;
+    var xml = new XMLSerializer().serializeToString(svg), img = new Image();
+    img.onload = function () {
+      var size = 900, pad = 60, c = document.createElement("canvas"); c.width = c.height = size + pad * 2;
+      var g = c.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, c.width, c.height); g.imageSmoothingEnabled = false; g.drawImage(img, pad, pad, size, size);
+      c.toBlob(function (b) { var a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = "qareeb-qr.png"; document.body.appendChild(a); a.click(); document.body.removeChild(a); setTimeout(function () { URL.revokeObjectURL(a.href); }, 2000); }, "image/png");
+    };
+    img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(xml);
+  }
 
   // ------------------------------------------------------------ home (what needs attention)
   function renderHome() {
@@ -427,7 +487,9 @@
     }
     var b = e.target.closest("[data-act]"); if (!b || b.tagName === "SELECT") return;
     var item = b.closest(".item"), id = item ? item.dataset.id : "", act = b.dataset.act;
-    if (act === "hfilter") { histFilter = b.dataset.v; render(); }
+    if (act === "copyurl") copyText(b.dataset.url);
+    else if (act === "qrdl") downloadQr();
+    else if (act === "hfilter") { histFilter = b.dataset.v; render(); }
     else if (act === "edito") openOwnerForm(state.owners.filter(function (x) { return String(x.id) === id; })[0]);
     else if (act === "delo") {
       var ow = state.owners.filter(function (x) { return String(x.id) === id; })[0];
@@ -464,6 +526,7 @@
   };
   $("list").onchange = function (e) {
     var act = e.target.dataset.act, lid = e.target.closest(".item") ? e.target.closest(".item").dataset.id : "";
+    if (e.target.id === "shareLang") { shareLang = e.target.value; renderShare(); return; }
     if (act === "lstatus") patchLead(lid, { status: e.target.value }, "Status updated.");
     else if (act === "lassign") patchLead(lid, { assigned_to: e.target.value || null }, "Assigned.");
     else if (act === "lfollow") patchLead(lid, { follow_up: e.target.value || null }, e.target.value ? "Follow-up date saved." : "Follow-up date cleared.");

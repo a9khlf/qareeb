@@ -42,6 +42,7 @@
       change: "Change", viewMap: "View on Google Maps",
       foot: "Student housing in Kuala Lumpur and Ampang.",
       footNote: "Always confirm the details with the owner before you pay.",
+      staffLink: "Staff login",
       available: "Available", reserved: "Reserved", taken: "Rented",
       walk: "min walk", ride: "min by car",
       perMonth: "per month",
@@ -116,6 +117,7 @@
       change: "تغيير", viewMap: "عرض في خرائط جوجل",
       foot: "سكن الطلاب في كوالالمبور وأمبانغ.",
       footNote: "تأكد دائماً من التفاصيل مع المالك قبل الدفع.",
+      staffLink: "دخول الموظفين",
       available: "متاح", reserved: "محجوز", taken: "تم تأجيره",
       walk: "دقيقة سيراً", ride: "دقيقة بالسيارة",
       perMonth: "شهرياً",
@@ -162,6 +164,9 @@
 
   var lang = "en", view = "list", campus = null, map, markers = [], dmap, pinMap, pinMarker, pinLatLng;
   try { lang = localStorage.getItem("qareeb-lang") || "en"; } catch (e) {}
+  // Share links can open the site in a chosen language (?lang=ar) and for a chosen center (?center=id)
+  var urlParams = new URLSearchParams(location.search);
+  if (urlParams.get("lang") === "ar" || urlParams.get("lang") === "en") { lang = urlParams.get("lang"); try { localStorage.setItem("qareeb-lang", lang); } catch (e) {} }
   var $ = function (id) { return document.getElementById(id); };
   var t = function (k) { return T[lang][k] || k; };
   var pick = function (o) { return o[lang] || o.en; };
@@ -540,6 +545,8 @@
     } catch (e) {}
   }
   function restoreCampus() {
+    var wanted = urlParams.get("center");
+    if (wanted) { var fromLink = CAMPUSES.filter(function (x) { return x.id === wanted; })[0]; if (fromLink) { campus = fromLink; storeCampus(); return; } }
     try {
       var s = JSON.parse(localStorage.getItem("qareeb-center") || "null"); if (!s) return;
       if (s.k === "list") { var c = CAMPUSES.filter(function (x) { return x.id === s.id; })[0]; if (c) campus = c; }

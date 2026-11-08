@@ -167,6 +167,15 @@
   // Share links can open the site in a chosen language (?lang=ar) and for a chosen center (?center=id)
   var urlParams = new URLSearchParams(location.search);
   if (urlParams.get("lang") === "ar" || urlParams.get("lang") === "en") { lang = urlParams.get("lang"); try { localStorage.setItem("qareeb-lang", lang); } catch (e) {} }
+  // A staff member's personal link (?ref=code) is remembered for 30 days, so a request sent later is credited to them.
+  (function () {
+    var r = (urlParams.get("ref") || "").replace(/[^A-Za-z0-9]/g, "").slice(0, 20);
+    if (r) { try { localStorage.setItem("qareeb-ref", JSON.stringify({ c: r, t: Date.now() })); } catch (e) {} }
+  })();
+  function currentRef() {
+    try { var s = JSON.parse(localStorage.getItem("qareeb-ref") || "null"); if (s && s.c && Date.now() - s.t < 30 * 864e5) return s.c; } catch (e) {}
+    return null;
+  }
   var $ = function (id) { return document.getElementById(id); };
   var t = function (k) { return T[lang][k] || k; };
   var pick = function (o) { return o[lang] || o.en; };
@@ -377,7 +386,7 @@
   function reserveRoom(l, name, phone) {
     return fetch(SB.url + "/rest/v1/rpc/reserve_room", {
       method: "POST", headers: { apikey: SB.key, "Content-Type": "application/json" },
-      body: JSON.stringify({ p_listing_id: l.id, p_name: name, p_whatsapp: phone, p_center: campus ? campus.id : null })
+      body: JSON.stringify({ p_listing_id: l.id, p_name: name, p_whatsapp: phone, p_center: campus ? campus.id : null, p_ref: currentRef() })
     }).then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); });
   }
   function closeRes() { $("resModal").hidden = true; if ($("modal").hidden && $("pinModal").hidden) document.body.style.overflow = ""; }
@@ -619,7 +628,7 @@
     fetch(SB.url + "/rest/v1/requests", {
       method: "POST", keepalive: true,
       headers: { apikey: SB.key, "Content-Type": "application/json", Prefer: "return=minimal" },
-      body: JSON.stringify({ listing_id: l.id, name: "Quick request", whatsapp: "via WhatsApp", center: campus ? campus.id : null, kind: kind || "ask" })
+      body: JSON.stringify({ listing_id: l.id, name: "Quick request", whatsapp: "via WhatsApp", center: campus ? campus.id : null, kind: kind || "ask", ref: currentRef() || undefined })
     }).catch(function (e) { console.warn("Could not save request", e); });
   }
   var HEX = /^#[0-9a-fA-F]{6}$/;

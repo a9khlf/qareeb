@@ -199,10 +199,12 @@
 
   // ------------------------------------------------------------ student site (links to share)
   var shareLang = "";   // "" = student's own language, "en", "ar"
+  var shareRef = true;  // add my personal code, so leads from my links are credited to me
   function siteBase() { return location.origin + location.pathname.replace(/[^/]*$/, ""); }
   function siteLink(extra) {
     var q = [];
     if (extra) q.push(extra);
+    if (shareRef && access && access.ref_code) q.push("ref=" + encodeURIComponent(access.ref_code));
     if (shareLang) q.push("lang=" + shareLang);
     return siteBase() + (q.length ? "?" + q.join("&") : "");
   }
@@ -224,6 +226,8 @@
     $("list").innerHTML =
       '<div class="sharecard"><h2>Link for students</h2><p class="help">Send this to students, post it in your WhatsApp groups, or print the QR code on a poster. It opens the Qareeb website.</p>' +
       '<div class="fld" style="max-width:320px;margin:12px 0 0"><label for="shareLang">Language the link opens in</label><select id="shareLang">' + opt("", "The student’s own choice") + opt("en", "English") + opt("ar", "العربية (Arabic)") + "</select></div>" +
+      (access && access.ref_code ? '<label class="chk" style="margin:4px 0 0"><input type="checkbox" id="shareRef"' + (shareRef ? " checked" : "") + '> Credit leads to me (adds my personal code to every link on this page)</label>' +
+        '<p class="help" style="margin:0 0 4px">A student who opens a link with your code and then asks about a room, asks for a video tour or reserves becomes a lead credited to you, and starts out assigned to you. The code is remembered for 30 days on that student’s phone.</p>' : "") +
       '<div class="linkrow"><input id="shareUrl" readonly value="' + esc(url) + '" aria-label="Student link">' +
       '<button class="btn sm" type="button" data-act="copyurl" data-url="' + esc(url) + '">Copy link</button>' +
       '<a class="btn wa sm" target="_blank" rel="noopener" href="' + esc(waShare(url)) + '">Share on WhatsApp</a>' +
@@ -294,6 +298,13 @@
       for (var d = 6; d >= 0; d--) { var dt = new Date(now - d * 24 * hour), key = dt.getFullYear() + "-" + String(dt.getMonth() + 1).padStart(2, "0") + "-" + String(dt.getDate()).padStart(2, "0"); days.push({ key: key, label: dt.toLocaleDateString([], { weekday: "short" }), n: 0 }); }
       state.requests.forEach(function (r) { var c = new Date(r.created_at), key = c.getFullYear() + "-" + String(c.getMonth() + 1).padStart(2, "0") + "-" + String(c.getDate()).padStart(2, "0"); days.forEach(function (x) { if (x.key === key) x.n++; }); });
       var dmax = Math.max.apply(null, days.map(function (x) { return x.n; }).concat([1]));
+      var bySrc = {}, noSrc = 0;
+      state.requests.forEach(function (r) { if (r.referred_by) { var s = bySrc[r.referred_by] = bySrc[r.referred_by] || { n: 0, rented: 0 }; s.n++; if (r.status === "rented") s.rented++; } else noSrc++; });
+      var srcRows = Object.keys(bySrc).sort(function (a, b) { return bySrc[b].n - bySrc[a].n; }).map(function (k) {
+        return '<div class="count-row"><span>' + esc(personName(k)) + '’s link</span><span><b>' + bySrc[k].n + "</b> lead" + (bySrc[k].n === 1 ? "" : "s") + (bySrc[k].rented ? " · " + bySrc[k].rented + " rented" : "") + "</span></div>";
+      }).join("");
+      funnel += '<div class="item" style="display:block"><h3>Where leads come from</h3>' + srcRows +
+        '<div class="count-row"><span>Website (no personal link)</span><span><b>' + noSrc + "</b> lead" + (noSrc === 1 ? "" : "s") + "</span></div></div>";
       funnel += '<div class="item" style="display:block"><h3>Requests, last 7 days</h3><div class="spark">' + days.map(function (x) { return '<div><i style="height:' + Math.max(3, Math.round(x.n / dmax * 60)) + 'px"></i><b>' + x.n + "</b><span>" + x.label + "</span></div>"; }).join("") + "</div></div>";
     }
     $("list").innerHTML = '<div class="tiles">' + tiles + "</div>" +
@@ -402,6 +413,7 @@
     var chipsH = '<span class="chip st-' + esc(r.status) + '">' + esc(statusLabel(r.status)) + "</span>" +
       (r.kind === "reserve" ? '<span class="chip off">RESERVATION</span>' : "") + (r.kind === "tour" ? '<span class="chip">VIDEO TOUR</span>' : "") +
       '<span class="chip">' + esc(personName(r.assigned_to)) + "</span>" +
+      (r.referred_by ? '<span class="chip ok">From ' + esc(personName(r.referred_by)) + "’s link</span>" : "") +
       (r.follow_up ? '<span class="chip ' + (isDue(r) ? "off" : "") + '">' + (isDue(r) ? "Follow up due " : "Follow up ") + esc(r.follow_up) + "</span>" : "");
     var acts = "";
     if (edit) {
@@ -527,6 +539,7 @@
   $("list").onchange = function (e) {
     var act = e.target.dataset.act, lid = e.target.closest(".item") ? e.target.closest(".item").dataset.id : "";
     if (e.target.id === "shareLang") { shareLang = e.target.value; renderShare(); return; }
+    if (e.target.id === "shareRef") { shareRef = e.target.checked; renderShare(); return; }
     if (act === "lstatus") patchLead(lid, { status: e.target.value }, "Status updated.");
     else if (act === "lassign") patchLead(lid, { assigned_to: e.target.value || null }, "Assigned.");
     else if (act === "lfollow") patchLead(lid, { follow_up: e.target.value || null }, e.target.value ? "Follow-up date saved." : "Follow-up date cleared.");

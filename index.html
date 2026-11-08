@@ -16,8 +16,17 @@
 <body>
 <header class="top">
   <div class="wrap bar">
-    <a class="logo" href="./"><svg class="logo-img" viewBox="0 0 64 64" width="38" height="38" aria-hidden="true" focusable="false"><path fill="#0f5c70" d="M32 3C19.3 3 9 13 9 25.5c0 15.6 17.6 32.4 21.2 35.6a2.6 2.6 0 0 0 3.6 0C37.4 57.9 55 41.1 55 25.5 55 13 44.7 3 32 3z"/><path fill="#fff" d="M32 13.5 46.5 26h-4.3v12.5H21.8V26h-4.3z"/><rect x="28.6" y="29" width="6.8" height="9.5" rx="1.4" fill="#0f5c70"/><circle cx="47.5" cy="12.5" r="6" fill="#c8892b" stroke="#fff" stroke-width="2.4"/><path d="m44.9 12.6 1.9 1.9 3.5-3.7" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Qareeb <small>قريب</small></span></a>
-    <button id="langBtn" class="lang" type="button">العربية</button>
+    <a class="logo" href="#rooms"><svg class="logo-img" viewBox="0 0 64 64" width="38" height="38" aria-hidden="true" focusable="false"><path fill="#0f5c70" d="M32 3C19.3 3 9 13 9 25.5c0 15.6 17.6 32.4 21.2 35.6a2.6 2.6 0 0 0 3.6 0C37.4 57.9 55 41.1 55 25.5 55 13 44.7 3 32 3z"/><path fill="#fff" d="M32 13.5 46.5 26h-4.3v12.5H21.8V26h-4.3z"/><rect x="28.6" y="29" width="6.8" height="9.5" rx="1.4" fill="#0f5c70"/><circle cx="47.5" cy="12.5" r="6" fill="#c8892b" stroke="#fff" stroke-width="2.4"/><path d="m44.9 12.6 1.9 1.9 3.5-3.7" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Qareeb <small>قريب</small></span></a>
+    <nav id="nav" class="nav" aria-label="Main menu">
+      <a href="#rooms" data-i18n="navRooms">Rooms</a>
+      <a href="#how" data-i18n="navHow">How it works</a>
+      <a href="#owners" data-i18n="navOwners">For owners</a>
+      <a id="navContact" class="navcta" href="#" target="_blank" rel="noopener" data-i18n="navContact">Contact</a>
+    </nav>
+    <div class="barright">
+      <button id="langBtn" class="lang" type="button">العربية</button>
+      <button id="menuBtn" class="menubtn" type="button" aria-expanded="false" aria-controls="nav" aria-label="Menu"><span></span></button>
+    </div>
   </div>
 </header>
 
@@ -29,7 +38,7 @@
   </div>
 </section>
 
-<section class="wrap searchwrap">
+<section class="wrap searchwrap" id="rooms">
   <div class="searchcard">
     <div class="search">
         <div class="wide">
@@ -109,7 +118,17 @@
   <noscript><p class="empty">Qareeb needs JavaScript to show the rooms. Please enable it and reload the page.</p></noscript>
 </main>
 
-<section class="owner wrap">
+<section class="wrap how" id="how" aria-labelledby="howT">
+  <h2 id="howT" data-i18n="hiwTitle">How Qareeb works</h2>
+  <ol class="steps">
+    <li><span class="n">1</span><h3 data-i18n="hiw1t">Choose your language center</h3><p data-i18n="hiw1d">Type its name, or drop a pin on the map. Every distance is measured from there.</p></li>
+    <li><span class="n">2</span><h3 data-i18n="hiw2t">See the closest rooms first</h3><p data-i18n="hiw2d">Rooms within walking distance come first, with the cost to move in and what has been verified.</p></li>
+    <li><span class="n">3</span><h3 data-i18n="hiw3t">Reserve or ask</h3><p data-i18n="hiw3d">Hold a verified room for 24 hours, or ask any question on WhatsApp.</p></li>
+    <li><span class="n">4</span><h3 data-i18n="hiw4t">Move in</h3><p data-i18n="hiw4d">We confirm everything on WhatsApp and send you the deposit details.</p></li>
+  </ol>
+</section>
+
+<section class="owner wrap" id="owners">
   <h2 data-i18n="ownerTitle">Own a room or apartment near a language center?</h2>
   <p data-i18n="ownerText">List it on Qareeb and reach students looking for a place in your area.</p>
   <a id="ownerBtn" class="btn" target="_blank" rel="noopener" data-i18n="ownerBtn">Contact us on WhatsApp</a>

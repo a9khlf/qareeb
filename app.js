@@ -14,6 +14,12 @@
       heroTitle: "Find a room within walking distance of your language center",
       heroSub: "Type your center, see the closest rooms first, and know what has been verified before you pay.",
       heroEyebrow: "Your guide to student housing in Kuala Lumpur",
+      navRooms: "Rooms", navHow: "How it works", navOwners: "For owners", navContact: "Contact", menuLabel: "Menu",
+      hiwTitle: "How Qareeb works",
+      hiw1t: "Choose your language center", hiw1d: "Type its name, or drop a pin on the map. Every distance is measured from there.",
+      hiw2t: "See the closest rooms first", hiw2d: "Rooms within walking distance come first, with the cost to move in and what has been verified.",
+      hiw3t: "Reserve or ask", hiw3d: "Hold a verified room for 24 hours, or ask any question on WhatsApp.",
+      hiw4t: "Move in", hiw4d: "We confirm everything on WhatsApp and send you the deposit details.",
       fCampus: "My language center", campusPh: "Type your center, e.g. Britannia",
       fWalk: "Walking distance to my center", walkAny: "Any distance", walk10: "Up to 10 min", walk15: "Up to 15 min", walk20: "Up to 20 min", walk30: "Up to 30 min",
       fArea: "Area", fType: "Type of place", fPrice: "Maximum price (RM per month)", fSort: "Sort by",
@@ -83,6 +89,12 @@
       heroTitle: "ابحث عن سكن على مسافة مشي من معهدك",
       heroSub: "اكتب اسم معهدك لتظهر لك أقرب الغرف أولاً، واعرف ما تم التحقق منه قبل أن تدفع.",
       heroEyebrow: "دليلك للسكن في كوالالمبور",
+      navRooms: "الغرف", navHow: "كيف يعمل", navOwners: "للملاك", navContact: "تواصل معنا", menuLabel: "القائمة",
+      hiwTitle: "كيف يعمل قريب",
+      hiw1t: "اختر معهد اللغة", hiw1d: "اكتب اسمه أو حدّد موقعه على الخريطة، وتُقاس كل المسافات منه.",
+      hiw2t: "شاهد أقرب الغرف أولاً", hiw2d: "تظهر أولاً الغرف القريبة سيراً، مع تكلفة الانتقال وما تم التحقق منه.",
+      hiw3t: "احجز أو اسأل", hiw3d: "احجز غرفة موثّقة لمدة ٢٤ ساعة، أو اسأل أي سؤال عبر واتساب.",
+      hiw4t: "انتقل إلى سكنك", hiw4d: "نؤكد كل شيء عبر واتساب ونرسل لك تفاصيل العربون.",
       fCampus: "معهد اللغة الذي أدرس فيه", campusPh: "اكتب اسم معهدك، مثلاً: بريتانيا",
       fWalk: "مسافة المشي إلى معهدي", walkAny: "أي مسافة", walk10: "حتى ١٠ دقائق", walk15: "حتى ١٥ دقيقة", walk20: "حتى ٢٠ دقيقة", walk30: "حتى ٣٠ دقيقة",
       fArea: "المنطقة", fType: "نوع السكن", fPrice: "أعلى سعر (رينغيت ماليزي شهرياً)", fSort: "ترتيب النتائج",
@@ -570,6 +582,8 @@
     $("langBtn").textContent = lang === "ar" ? "English" : "العربية";
     $("close").setAttribute("aria-label", lang === "ar" ? "إغلاق" : "Close"); $("pinClose").setAttribute("aria-label", lang === "ar" ? "إغلاق" : "Close");
     closeSug(); campusUI(); areaOptions();
+    $("navContact").href = waLink(lang === "ar" ? "مرحباً، لدي سؤال عن موقع قريب." : "Hello, I have a question about Qareeb.");
+    $("menuBtn").setAttribute("aria-label", t("menuLabel"));
     $("ownerBtn").href = waLink(lang === "ar" ? "مرحباً، لدي سكن وأرغب في إضافته إلى موقع قريب." : "Hello, I have accommodation and would like to list it on Qareeb.");
     render();
   }
@@ -652,7 +666,7 @@
     var typed = $("campusInput").value.trim(), en = typed ? esc(typed) : T.en.pinned, ar = typed ? esc(typed) : T.ar.pinned;
     closePin(); setCampus({ id: "custom", group: "custom", name: { en: en, ar: ar }, lat: pinLatLng.lat, lng: pinLatLng.lng }, "pin", typed);
   };
-  document.addEventListener("keydown", function (e) { if (e.key === "Escape") { closeRes(); closeDetail(); closePin(); closeSug(); } });
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape") { closeRes(); closeDetail(); closePin(); closeSug(); closeMenu(); } });
 
   var inp = $("campusInput");
   inp.oninput = onSugInput;
@@ -665,6 +679,21 @@
   };
   $("campusList").onmousedown = function (e) { var li = e.target.closest("li[data-i]"); if (li) { e.preventDefault(); chooseSug(+li.dataset.i); } };
   document.addEventListener("click", function (e) { if (!$("combo").contains(e.target)) closeSug(); });
+
+  // ---- top menu bar: phone menu button, and the link for the section you are reading ----
+  var menuBtn = $("menuBtn"), navEl = $("nav");
+  function closeMenu() { navEl.classList.remove("open"); menuBtn.setAttribute("aria-expanded", "false"); }
+  menuBtn.onclick = function () { var open = navEl.classList.toggle("open"); menuBtn.setAttribute("aria-expanded", open ? "true" : "false"); };
+  navEl.addEventListener("click", function (e) { if (e.target.closest("a")) closeMenu(); });
+  document.addEventListener("click", function (e) { if (!e.target.closest(".top")) closeMenu(); });
+  if ("IntersectionObserver" in window) {
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) {
+        if (en.isIntersecting) document.querySelectorAll(".nav a[href^=\"#\"]").forEach(function (a) { a.classList.toggle("on", a.getAttribute("href") === "#" + en.target.id); });
+      });
+    }, { rootMargin: "-40% 0px -55% 0px" });
+    ["rooms", "how", "owners"].forEach(function (id) { var el = $(id); if (el) io.observe(el); });
+  }
 
   load().then(function () { restoreCampus(); applyLang(); });
 })();

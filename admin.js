@@ -2,7 +2,7 @@
   "use strict";
   var SB = window.QAREEB_SUPABASE, KEY = "qareeb-admin-session";
   var $ = function (id) { return document.getElementById(id); };
-  var state = { tab: "home", rooms: [], centers: [], requests: [], suggestions: [], staff: [], notes: {}, team: [], owners: [], activity: [], links: [], linkEvents: [] };
+  var state = { tab: "home", rooms: [], centers: [], requests: [], suggestions: [], staff: [], notes: {}, team: [], owners: [], activity: [], links: [], linkEvents: [], announcements: [], reads: [], names: [] };
   var session = null, access = null;
   var ROLES = {
     owner:      { label: "Owner",            note: "Everything, including staff and their access." },
@@ -12,11 +12,11 @@
     viewer:     { label: "Viewer",           note: "Can look at everything except student contacts. Cannot change anything." }
   };
   var PRESETS = {
-    owner:      { rooms_edit: 1, rooms_delete: 1, centers_edit: 1, leads_view: 1, leads_edit: 1, site_edit: 1 },
-    manager:    { rooms_edit: 1, rooms_delete: 1, centers_edit: 1, leads_view: 1, leads_edit: 1, site_edit: 1 },
-    data_entry: { rooms_edit: 1, rooms_delete: 0, centers_edit: 0, leads_view: 0, leads_edit: 0, site_edit: 0 },
-    sales:      { rooms_edit: 0, rooms_delete: 0, centers_edit: 0, leads_view: 1, leads_edit: 1, site_edit: 0 },
-    viewer:     { rooms_edit: 0, rooms_delete: 0, centers_edit: 0, leads_view: 0, leads_edit: 0, site_edit: 0 }
+    owner:      { rooms_edit: 1, rooms_delete: 1, centers_edit: 1, leads_view: 1, leads_edit: 1, site_edit: 1, announce: 1 },
+    manager:    { rooms_edit: 1, rooms_delete: 1, centers_edit: 1, leads_view: 1, leads_edit: 1, site_edit: 1, announce: 1 },
+    data_entry: { rooms_edit: 1, rooms_delete: 0, centers_edit: 0, leads_view: 0, leads_edit: 0, site_edit: 0, announce: 0 },
+    sales:      { rooms_edit: 0, rooms_delete: 0, centers_edit: 0, leads_view: 1, leads_edit: 1, site_edit: 0, announce: 0 },
+    viewer:     { rooms_edit: 0, rooms_delete: 0, centers_edit: 0, leads_view: 0, leads_edit: 0, site_edit: 0, announce: 0 }
   };
   var SWITCHES = [
     ["rooms_edit",   "Add and edit rooms, photos and status"],
@@ -24,7 +24,8 @@
     ["centers_edit", "Add and edit language centers"],
     ["leads_view",   "See student requests, names and phone numbers"],
     ["leads_edit",   "Work on and delete student requests (needs the switch above)"],
-    ["site_edit",    "Edit the website wording and the WhatsApp number"]
+    ["site_edit",    "Edit the website wording and the WhatsApp number"],
+    ["announce",     "Post announcements to the whole team"]
   ];
   function can(p) { return !!(access && access[p]); }
   try { session = JSON.parse(sessionStorage.getItem(KEY)); } catch (e) {}
@@ -170,8 +171,11 @@
       can("staff_manage") ? api("/rest/v1/activity_log?select=*&order=at.desc&limit=300").catch(none) : none(),
       can("site_edit") ? api("/rest/v1/site_settings?select=*&id=eq.1").catch(none) : none(),
       api("/rest/v1/share_links?select=*&order=created_at").catch(none),
-      can("leads_view") ? api("/rest/v1/link_events?select=slug,event,at&at=gte." + encodeURIComponent(new Date(Date.now() - 30 * 864e5).toISOString()) + "&order=at.desc&limit=10000").catch(none) : none()
-    ]).then(function (r) { state.links = r[10] || []; state.linkEvents = r[11] || []; state.site = (r[9] && r[9][0]) || null; state.rooms = r[0] || []; state.centers = r[1] || []; state.requests = r[2] || []; state.suggestions = r[3] || []; state.staff = r[4] || []; state.team = r[6] || []; state.owners = r[7] || []; state.activity = r[8] || []; groupNotes(r[5] || []); render(); })
+      can("leads_view") ? api("/rest/v1/link_events?select=slug,event,at&at=gte." + encodeURIComponent(new Date(Date.now() - 30 * 864e5).toISOString()) + "&order=at.desc&limit=10000").catch(none) : none(),
+      api("/rest/v1/announcements?select=*&order=created_at.desc&limit=100").catch(none),
+      api("/rest/v1/announcement_reads?select=*").catch(none),
+      api("/rest/v1/rpc/team_names", { method: "POST", body: {} }).catch(none)
+    ]).then(function (r) { state.announcements = r[12] || []; state.reads = r[13] || []; state.names = r[14] || []; state.links = r[10] || []; state.linkEvents = r[11] || []; state.site = (r[9] && r[9][0]) || null; state.rooms = r[0] || []; state.centers = r[1] || []; state.requests = r[2] || []; state.suggestions = r[3] || []; state.staff = r[4] || []; state.team = r[6] || []; state.owners = r[7] || []; state.activity = r[8] || []; groupNotes(r[5] || []); render(); })
       .catch(function (e) { msg("Could not load data: " + e.message, true); });
   }
 
@@ -198,14 +202,58 @@
     document.querySelectorAll(".tab").forEach(function (b) { b.classList.toggle("on", b.dataset.tab === state.tab); });
     var newN = state.requests.filter(function (r) { return r.status === "new"; }).length, lt = document.querySelector('[data-tab=requests]');
     if (lt) lt.textContent = "Leads" + (newN ? " (" + newN + " new)" : "");
+    var unreadN = unreadNews().length, nt = document.querySelector('[data-tab=news]');
+    if (nt) nt.textContent = "Announcements" + (unreadN ? " (" + unreadN + " new)" : "");
+    renderBanners();
     $("addBtn").textContent = state.tab === "centers" ? "+ Add center" : state.tab === "staff" ? "+ Add staff member" : state.tab === "owners" ? "+ Add owner" : "+ Add room";
-    var TITLES = { home: "Overview", search: "Search results", share: "Student page (share)", site: "Edit website", rooms: "Rooms", requests: "Leads", owners: "Owners", centers: "Language centers", suggest: "Center suggestions", staff: "Team", history: "Audit log" };
+    var TITLES = { home: "Overview", search: "Search results", share: "Student page (share)", site: "Edit website", rooms: "Rooms", requests: "Leads", owners: "Owners", centers: "Language centers", suggest: "Center suggestions", news: "Announcements", staff: "Team", history: "Audit log" };
     $("pageTitle").textContent = TITLES[state.tab] || "";
-    $("addBtn").hidden = state.tab === "home" || state.tab === "search" || state.tab === "share" || state.tab === "site" || state.tab === "history" || state.tab === "requests" || state.tab === "suggest" ||
+    $("addBtn").hidden = state.tab === "home" || state.tab === "search" || state.tab === "share" || state.tab === "site" || state.tab === "news" || state.tab === "history" || state.tab === "requests" || state.tab === "suggest" ||
       ((state.tab === "rooms" || state.tab === "owners") && !can("rooms_edit")) || (state.tab === "centers" && !can("centers_edit"));
-    if (state.tab === "home") renderHome(); else if (state.tab === "search") renderSearch(); else if (state.tab === "share") renderShare(); else if (state.tab === "site") renderSite(); else if (state.tab === "rooms") renderRooms(); else if (state.tab === "requests") renderRequests(); else if (state.tab === "suggest") renderSuggestions(); else if (state.tab === "staff") renderStaff();
+    if (state.tab === "home") renderHome(); else if (state.tab === "search") renderSearch(); else if (state.tab === "share") renderShare(); else if (state.tab === "site") renderSite(); else if (state.tab === "rooms") renderRooms(); else if (state.tab === "requests") renderRequests(); else if (state.tab === "suggest") renderSuggestions(); else if (state.tab === "news") renderNews(); else if (state.tab === "staff") renderStaff();
     else if (state.tab === "owners") renderOwners(); else if (state.tab === "history") renderHistory(); else renderCenters();
   }
+  // ------------------------------------------------------------ announcements (with read receipts)
+  function isReadNews(id) { return state.reads.some(function (r) { return r.announcement_id === id && r.staff_email === access.email; }); }
+  function unreadNews() { return state.announcements.filter(function (a) { return a.active && !isReadNews(a.id); }); }
+  function newsMeta(a) { return "Posted " + when(a.created_at) + " by " + personName(a.created_by); }
+  function renderBanners() {
+    var list = state.tab === "news" ? [] : unreadNews();
+    $("banners").innerHTML = list.slice(0, 3).map(function (a) {
+      return '<div class="banner" data-id="' + a.id + '"><span class="tag">Announcement</span><h3>' + esc(a.title) + "</h3><p>" + esc(a.body) + '</p><div class="row"><span>' + esc(newsMeta(a)) + '</span><button class="btn sm" type="button" data-act="gotit">Got it</button></div></div>';
+    }).join("") + (list.length > 3 ? '<p class="help" style="margin:-4px 0 12px">' + (list.length - 3) + " more in Announcements.</p>" : "");
+  }
+  function ackNews(id) {
+    return api("/rest/v1/rpc/ack_announcement", { method: "POST", body: { p_id: id } }).then(function () {
+      if (!isReadNews(id)) state.reads.push({ announcement_id: id, staff_email: access.email, read_at: new Date().toISOString() });
+      render();
+    }).catch(function (er) { msg(er.message, true); });
+  }
+  function renderNews() {
+    var poster = can("announce"), audience = state.names;
+    var form = poster ? '<div class="sharecard"><h2>Post a new announcement</h2><p class="help">Everyone on the team sees it at the top of their screen until they press <b>Got it</b>. You see who has read it.</p>' +
+      '<form id="newsForm"><div class="fld" style="margin-top:12px"><label for="n-t">Title</label><input id="n-t" name="title" required maxlength="120"></div>' +
+      '<div class="fld"><label for="n-b">Message</label><textarea id="n-b" name="body" required maxlength="2000" style="min-height:110px"></textarea></div>' +
+      '<button class="btn" type="submit" id="n-save">Post announcement</button></form></div>' : "";
+    var items = state.announcements.filter(function (a) { return a.active || poster; });
+    $("list").innerHTML = form + (items.length ? items.map(function (a) {
+      var readers = state.reads.filter(function (r) { return r.announcement_id === a.id; }).map(function (r) { return r.staff_email; }), rec = "";
+      if (poster && a.active) {
+        var done = audience.filter(function (p) { return readers.indexOf(p.email) >= 0; }), todo = audience.filter(function (p) { return readers.indexOf(p.email) < 0; });
+        rec = '<div class="receipts"><b>Read by ' + done.length + " of " + audience.length + "</b>" + (done.length ? "<br>Read: " + esc(done.map(function (p) { return p.name || p.email; }).join(", ")) : "") + (todo.length ? "<br>Not yet: " + esc(todo.map(function (p) { return p.name || p.email; }).join(", ")) : "") + "</div>";
+      }
+      return '<div class="item" data-id="' + a.id + '" style="display:block"><h3>' + esc(a.title) + (a.active ? "" : ' <span class="chip off">Removed</span>') + '</h3><div class="meta2">' + esc(newsMeta(a)) + '</div><div class="news">' + esc(a.body) + "</div>" + rec +
+        '<div class="acts">' + (a.active ? (isReadNews(a.id) ? '<span class="chip ok">You have read this</span>' : '<button class="btn sm" type="button" data-act="gotit">Got it</button>') : "") + (poster && a.active ? '<button class="btn danger sm" type="button" data-act="newsoff">Remove</button>' : "") + "</div></div>";
+    }).join("") : '<p class="meta2">No announcements yet.</p>');
+  }
+  function postNews(form) {
+    $("n-save").disabled = true;
+    api("/rest/v1/announcements", { method: "POST", body: { title: form.elements.title.value.trim(), body: form.elements.body.value.trim() }, write: true })
+      .then(function (rows) { var id = rows && rows[0] && rows[0].id; msg("Posted. The team will see it at the top of their screen."); return loadAll().then(function () { if (id) return ackNews(id); }); })
+      .catch(function (er) { msg(er.message, true); $("n-save").disabled = false; });
+  }
+  $("banners").onclick = function (e) { var b = e.target.closest("[data-act=gotit]"); if (b) ackNews(+b.closest(".banner").dataset.id); };
+
   function ownerName(id) { var o = state.owners.filter(function (x) { return x.id === id; })[0]; return o ? o.name : ""; }
   function when(t) { return new Date(t).toLocaleString([], { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }); }
 
@@ -514,7 +562,7 @@
 
   // ------------------------------------------------------------ history (owners only)
   var histFilter = "all";
-  var ENT = { listings: "Room", centers: "Language center", owners: "Owner", staff: "Staff", site_settings: "Website", share_links: "Link" };
+  var ENT = { listings: "Room", centers: "Language center", owners: "Owner", staff: "Staff", site_settings: "Website", share_links: "Link", announcements: "Announcement" };
   function renderHistory() {
     var chipB = function (v, label) { return '<button type="button" class="fchip' + (histFilter === v ? " on" : "") + '" data-act="hfilter" data-v="' + v + '">' + label + "</button>"; };
     var rows = state.activity.filter(function (a) { return histFilter === "all" || a.entity === histFilter; });
@@ -586,7 +634,7 @@
   function roomOf(r) { return state.rooms.filter(function (x) { return x.id === r.listing_id; })[0]; }
   function personName(email) {
     if (!email) return "Nobody";
-    var p = state.team.filter(function (t) { return t.email === email; })[0] || state.staff.filter(function (t) { return t.email === email; })[0];
+    var p = state.team.filter(function (t) { return t.email === email; })[0] || state.staff.filter(function (t) { return t.email === email; })[0] || state.names.filter(function (t) { return t.email === email; })[0];
     return p && p.name ? p.name : email;
   }
   function leadMatches(r) {
@@ -695,7 +743,11 @@
     }
     var b = e.target.closest("[data-act]"); if (!b || b.tagName === "SELECT") return;
     var item = b.closest(".item"), id = item ? item.dataset.id : "", act = b.dataset.act;
-    if (act === "lkoff") {
+    if (act === "gotit") ackNews(+item.dataset.id);
+    else if (act === "newsoff") {
+      if (confirm("Remove this announcement? It disappears for everyone.")) api("/rest/v1/announcements?id=eq." + encodeURIComponent(item.dataset.id), { method: "PATCH", body: { active: false }, write: true }).then(function () { msg("Removed."); return loadAll(); }).catch(function (er) { msg(er.message, true); });
+    }
+    else if (act === "lkoff") {
       var kk = state.links.filter(function (x) { return String(x.id) === (b.closest("tr") ? b.closest("tr").dataset.id : ""); })[0];
       if (kk) api("/rest/v1/share_links?id=eq." + kk.id, { method: "PATCH", body: { active: !kk.active }, write: true }).then(function () { msg(kk.active ? "Switched off. The link no longer counts visits or credits anyone." : "Switched on."); return loadAll(); }).catch(function (er) { msg(er.message, true); });
     }
@@ -739,6 +791,7 @@
   $("list").onsubmit = function (e) {
     if (e.target.id === "siteForm") { e.preventDefault(); saveSite(e.target); }
     if (e.target.id === "linkForm") { e.preventDefault(); saveLink(e.target); }
+    if (e.target.id === "newsForm") { e.preventDefault(); postNews(e.target); }
   };
   $("list").oninput = function (e) {
     if (e.target.id === "leadSearch") { lf.q = e.target.value; renderLeadCards(); }

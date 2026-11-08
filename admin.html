@@ -115,6 +115,14 @@
   .dohead{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:6px}
   .dohead h3{margin:0;font-size:16px} .dohead .n{display:inline-block;margin-inline-start:8px;min-width:26px;text-align:center;padding:1px 8px;border-radius:999px;background:#fbe7d7;color:#8f3f12;font-size:13px;font-weight:700}
   .dohead a,.dohead button{background:none;border:0;color:var(--brand);font:inherit;font-size:14px;cursor:pointer;padding:0}
+  .banner{display:grid;gap:6px;background:#fff8e8;border:1px solid #e6cf94;border-inline-start:5px solid #c9a24a;border-radius:14px;padding:14px 16px;margin:0 0 12px}
+  .banner h3{margin:0;font-size:16px} .banner .tag{font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-weight:700;color:#8a6a14}
+  .banner .tag{justify-self:start;background:none;padding:0}
+  .banner p{margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
+  .banner .row{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;color:var(--muted);font-size:13px}
+  .news{white-space:pre-wrap;overflow-wrap:anywhere;margin:6px 0 8px}
+  .receipts{font-size:13.5px;color:var(--muted);margin-top:6px}
+  .receipts b{color:var(--ink)}
   .rank{display:grid;grid-template-columns:30px minmax(0,1fr) auto;gap:12px;align-items:center;padding:10px 0;border-bottom:1px dashed var(--line)} .rank:last-child{border-bottom:0}
   .rank .pos{width:28px;height:28px;border-radius:50%;background:var(--midnight);color:#e6cf94;display:grid;place-items:center;font-weight:700;font-size:13px}
   .rank small{display:block;color:var(--muted)}
@@ -205,6 +213,7 @@
         <button class="tab" data-tab="suggest" type="button">Center suggestions</button>
       </div>
       <div class="navgroup"><p class="navhead">Team</p>
+        <button class="tab" data-tab="news" type="button">Announcements</button>
         <button class="tab" data-tab="staff" type="button">Team</button>
         <button class="tab" data-tab="history" type="button">Audit log</button>
       </div>
@@ -221,6 +230,7 @@
       <button id="logout" class="iconbtn" type="button">Log out</button>
     </div>
     <div class="content">
+      <div id="banners"></div>
       <div class="contenthead"><h1 id="pageTitle">Overview</h1><button id="addBtn" class="btn sm" type="button">+ Add room</button></div>
       <div id="list"></div>
     </div>

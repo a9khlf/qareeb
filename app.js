@@ -14,15 +14,13 @@
       heroTitle: "Find a room within walking distance of your language center",
       heroSub: "Type your center, see the closest rooms first, and know what has been verified before you pay.",
       heroEyebrow: "Your guide to student housing in Kuala Lumpur",
-      navRooms: "Rooms", navHow: "How it works", navOwners: "For owners", navContact: "Contact", menuLabel: "Menu",
+      navRooms: "Rooms", navHow: "How it works", navContact: "Contact", menuLabel: "Menu",
       hiwTitle: "How Qareeb works",
       hiw1t: "Choose your language center", hiw1d: "Type its name, or drop a pin on the map. Every distance is measured from there.",
       hiw2t: "See the closest rooms first", hiw2d: "Rooms within walking distance come first, with the cost to move in and what has been verified.",
       hiw3t: "Reserve or ask", hiw3d: "Hold a verified room for 24 hours, or ask any question on WhatsApp.",
       hiw4t: "Move in", hiw4d: "We confirm everything on WhatsApp and send you the deposit details.",
-      val1t: "Trust", val1d: "A room is marked Verified only after a live video tour and an owner check.",
-      val2t: "Fast", val2d: "Ask or hold a room in a few taps. No sign-up needed.",
-      val3t: "Quality", val3d: "Closest rooms first, by walking time from your center, with move-in costs shown up front.",
+      val1t: "Trust", val2t: "Fast", val3t: "Quality",
       fCampus: "My language center", campusPh: "Type your center, e.g. Britannia",
       fWalk: "Walking distance to my center", walkAny: "Any distance", walk10: "Up to 10 min", walk15: "Up to 15 min", walk20: "Up to 20 min", walk30: "Up to 30 min",
       fArea: "Area", fType: "Type of place", fWho: "Who lives here", fPrice: "Maximum price (RM per month)", fSort: "Sort by",
@@ -42,9 +40,6 @@
       pinOption: "📍 Can't find it? Drop a pin on the map", pinTitle: "Show us where your language center is",
       pinHelp: "Tap the map where your center is. We will show the closest rooms to that spot.", pinUse: "Use this location", pinned: "My pinned location",
       change: "Change", viewMap: "View on Google Maps",
-      ownerTitle: "Own a room or apartment near a language center?",
-      ownerText: "List it on Qareeb and reach students looking for a place in your area.",
-      ownerBtn: "Contact us on WhatsApp",
       foot: "Student housing in Kuala Lumpur and Ampang.",
       footNote: "Always confirm the details with the owner before you pay.",
       available: "Available", reserved: "Reserved", taken: "Rented",
@@ -93,15 +88,13 @@
       heroTitle: "ابحث عن سكن على مسافة مشي من معهدك",
       heroSub: "اكتب اسم معهدك لتظهر لك أقرب الغرف أولاً، واعرف ما تم التحقق منه قبل أن تدفع.",
       heroEyebrow: "دليلك للسكن في كوالالمبور",
-      navRooms: "الغرف", navHow: "كيف يعمل", navOwners: "للملاك", navContact: "تواصل معنا", menuLabel: "القائمة",
+      navRooms: "الغرف", navHow: "كيف يعمل", navContact: "تواصل معنا", menuLabel: "القائمة",
       hiwTitle: "كيف يعمل قريب",
       hiw1t: "اختر معهد اللغة", hiw1d: "اكتب اسمه أو حدّد موقعه على الخريطة، وتُقاس كل المسافات منه.",
       hiw2t: "شاهد أقرب الغرف أولاً", hiw2d: "تظهر أولاً الغرف القريبة سيراً، مع تكلفة الانتقال وما تم التحقق منه.",
       hiw3t: "احجز أو اسأل", hiw3d: "احجز غرفة موثّقة لمدة ٢٤ ساعة، أو اسأل أي سؤال عبر واتساب.",
       hiw4t: "انتقل إلى سكنك", hiw4d: "نؤكد كل شيء عبر واتساب ونرسل لك تفاصيل العربون.",
-      val1t: "الثقة", val1d: "لا تُوسَم الغرفة بأنها «موثّقة» إلا بعد جولة فيديو مباشرة والتحقق من المالك.",
-      val2t: "السرعة", val2d: "اسأل أو احجز غرفة بنقرات قليلة، دون الحاجة إلى تسجيل.",
-      val3t: "الجودة", val3d: "الأقرب أولًا حسب مدة المشي من معهدك، مع إظهار تكاليف الانتقال مسبقًا.",
+      val1t: "الثقة", val2t: "السرعة", val3t: "الجودة",
       fCampus: "معهد اللغة الذي أدرس فيه", campusPh: "اكتب اسم معهدك، مثلاً: بريتانيا",
       fWalk: "مسافة المشي إلى معهدي", walkAny: "أي مسافة", walk10: "حتى ١٠ دقائق", walk15: "حتى ١٥ دقيقة", walk20: "حتى ٢٠ دقيقة", walk30: "حتى ٣٠ دقيقة",
       fArea: "المنطقة", fType: "نوع السكن", fWho: "من يسكن هنا", fPrice: "أعلى سعر (رينغيت ماليزي شهرياً)", fSort: "ترتيب النتائج",
@@ -121,9 +114,6 @@
       pinOption: "📍 لا تجده؟ حدّد الموقع على الخريطة", pinTitle: "أرِنا أين يقع معهد اللغة",
       pinHelp: "اضغط على الخريطة حيث يقع معهدك، وسنعرض لك أقرب الغرف إلى ذلك الموقع.", pinUse: "استخدم هذا الموقع", pinned: "الموقع الذي حددته",
       change: "تغيير", viewMap: "عرض في خرائط جوجل",
-      ownerTitle: "هل تملك غرفة أو شقة قريبة من معهد لغة؟",
-      ownerText: "أضف سكنك في «قريب» لتصل إلى الطلاب الباحثين عن سكن في منطقتك.",
-      ownerBtn: "تواصل معنا عبر واتساب",
       foot: "سكن الطلاب في كوالالمبور وأمبانغ.",
       footNote: "تأكد دائماً من التفاصيل مع المالك قبل الدفع.",
       available: "متاح", reserved: "محجوز", taken: "تم تأجيره",
@@ -599,7 +589,6 @@
     closeSug(); campusUI(); areaOptions();
     $("navContact").href = waLink(lang === "ar" ? "مرحباً، لدي سؤال عن موقع قريب." : "Hello, I have a question about Qareeb.");
     $("menuBtn").setAttribute("aria-label", t("menuLabel"));
-    $("ownerBtn").href = waLink(lang === "ar" ? "مرحباً، لدي سكن وأرغب في إضافته إلى موقع قريب." : "Hello, I have accommodation and would like to list it on Qareeb.");
     render();
   }
 
@@ -707,7 +696,7 @@
         if (en.isIntersecting) document.querySelectorAll(".nav a[href^=\"#\"]").forEach(function (a) { a.classList.toggle("on", a.getAttribute("href") === "#" + en.target.id); });
       });
     }, { rootMargin: "-40% 0px -55% 0px" });
-    ["rooms", "how", "owners"].forEach(function (id) { var el = $(id); if (el) io.observe(el); });
+    ["rooms", "how"].forEach(function (id) { var el = $(id); if (el) io.observe(el); });
   }
 
   load().then(function () { restoreCampus(); applyLang(); });

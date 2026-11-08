@@ -300,3 +300,9 @@ html{scroll-behavior:smooth}
 
 /* "Who lives here" tag on the room card */
 .walk.who{background:#efeae0;color:#3f4a4d;border:1px solid #e0d9c8}
+
+/* ===== Qareeb logo (header) ===== */
+.logo-full{display:block;height:44px;width:auto;max-width:none}
+.top .logo{gap:12px}
+.logo .adm{padding:4px 10px;border:1px solid var(--line);border-radius:999px;font-size:13px;font-weight:700;color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
+@media(max-width:600px){.logo-full{height:38px}}

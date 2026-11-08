@@ -12,18 +12,19 @@
     viewer:     { label: "Viewer",           note: "Can look at everything except student contacts. Cannot change anything." }
   };
   var PRESETS = {
-    owner:      { rooms_edit: 1, rooms_delete: 1, centers_edit: 1, leads_view: 1, leads_edit: 1 },
-    manager:    { rooms_edit: 1, rooms_delete: 1, centers_edit: 1, leads_view: 1, leads_edit: 1 },
-    data_entry: { rooms_edit: 1, rooms_delete: 0, centers_edit: 0, leads_view: 0, leads_edit: 0 },
-    sales:      { rooms_edit: 0, rooms_delete: 0, centers_edit: 0, leads_view: 1, leads_edit: 1 },
-    viewer:     { rooms_edit: 0, rooms_delete: 0, centers_edit: 0, leads_view: 0, leads_edit: 0 }
+    owner:      { rooms_edit: 1, rooms_delete: 1, centers_edit: 1, leads_view: 1, leads_edit: 1, site_edit: 1 },
+    manager:    { rooms_edit: 1, rooms_delete: 1, centers_edit: 1, leads_view: 1, leads_edit: 1, site_edit: 1 },
+    data_entry: { rooms_edit: 1, rooms_delete: 0, centers_edit: 0, leads_view: 0, leads_edit: 0, site_edit: 0 },
+    sales:      { rooms_edit: 0, rooms_delete: 0, centers_edit: 0, leads_view: 1, leads_edit: 1, site_edit: 0 },
+    viewer:     { rooms_edit: 0, rooms_delete: 0, centers_edit: 0, leads_view: 0, leads_edit: 0, site_edit: 0 }
   };
   var SWITCHES = [
     ["rooms_edit",   "Add and edit rooms, photos and status"],
     ["rooms_delete", "Delete rooms"],
     ["centers_edit", "Add and edit language centers"],
     ["leads_view",   "See student requests, names and phone numbers"],
-    ["leads_edit",   "Work on and delete student requests (needs the switch above)"]
+    ["leads_edit",   "Work on and delete student requests (needs the switch above)"],
+    ["site_edit",    "Edit the website wording and the WhatsApp number"]
   ];
   function can(p) { return !!(access && access[p]); }
   try { session = JSON.parse(sessionStorage.getItem(KEY)); } catch (e) {}
@@ -69,7 +70,7 @@
   function showPanel() {
     $("loginBox").hidden = true; $("panel").hidden = false; $("logout").hidden = false;
     $("who").textContent = (access.name || access.email) + " · " + (ROLES[access.role] ? ROLES[access.role].label : access.role);
-    var tabs = { requests: can("leads_view"), suggest: can("centers_edit"), staff: can("staff_manage"), owners: can("rooms_edit") || can("leads_view"), history: can("staff_manage") };
+    var tabs = { requests: can("leads_view"), suggest: can("centers_edit"), staff: can("staff_manage"), owners: can("rooms_edit") || can("leads_view"), history: can("staff_manage"), site: can("site_edit") };
     document.querySelectorAll(".tab").forEach(function (b) { b.hidden = tabs[b.dataset.tab] === false; });
     loadAll();
   }
@@ -147,7 +148,6 @@
 
   // ------------------------------------------------------------ data
   function loadAll() {
-    msg("");
     var none = function () { return Promise.resolve([]); };
     return Promise.all([
       api("/rest/v1/listings?select=*&order=id.desc"),
@@ -158,8 +158,9 @@
       can("leads_view") ? api("/rest/v1/lead_notes?select=*&order=created_at&limit=3000").catch(none) : none(),
       can("leads_view") ? api("/rest/v1/rpc/staff_directory", { method: "POST", body: {} }).catch(none) : none(),
       (can("rooms_edit") || can("leads_view")) ? api("/rest/v1/owners?select=*&order=name").catch(none) : none(),
-      can("staff_manage") ? api("/rest/v1/activity_log?select=*&order=at.desc&limit=300").catch(none) : none()
-    ]).then(function (r) { state.rooms = r[0] || []; state.centers = r[1] || []; state.requests = r[2] || []; state.suggestions = r[3] || []; state.staff = r[4] || []; state.team = r[6] || []; state.owners = r[7] || []; state.activity = r[8] || []; groupNotes(r[5] || []); render(); })
+      can("staff_manage") ? api("/rest/v1/activity_log?select=*&order=at.desc&limit=300").catch(none) : none(),
+      can("site_edit") ? api("/rest/v1/site_settings?select=*&id=eq.1").catch(none) : none()
+    ]).then(function (r) { state.site = (r[9] && r[9][0]) || null; state.rooms = r[0] || []; state.centers = r[1] || []; state.requests = r[2] || []; state.suggestions = r[3] || []; state.staff = r[4] || []; state.team = r[6] || []; state.owners = r[7] || []; state.activity = r[8] || []; groupNotes(r[5] || []); render(); })
       .catch(function (e) { msg("Could not load data: " + e.message, true); });
   }
 
@@ -187,11 +188,11 @@
     var newN = state.requests.filter(function (r) { return r.status === "new"; }).length, lt = document.querySelector('[data-tab=requests]');
     if (lt) lt.textContent = "Leads" + (newN ? " (" + newN + " new)" : "");
     $("addBtn").textContent = state.tab === "centers" ? "+ Add center" : state.tab === "staff" ? "+ Add staff member" : state.tab === "owners" ? "+ Add owner" : "+ Add room";
-    var TITLES = { home: "Home", share: "Student site", rooms: "Rooms", requests: "Leads", owners: "Owners", centers: "Language centers", suggest: "Center suggestions", staff: "Staff", history: "History" };
+    var TITLES = { home: "Home", share: "Student site", site: "Edit website", rooms: "Rooms", requests: "Leads", owners: "Owners", centers: "Language centers", suggest: "Center suggestions", staff: "Staff", history: "History" };
     $("pageTitle").textContent = TITLES[state.tab] || "";
-    $("addBtn").hidden = state.tab === "home" || state.tab === "share" || state.tab === "history" || state.tab === "requests" || state.tab === "suggest" ||
+    $("addBtn").hidden = state.tab === "home" || state.tab === "share" || state.tab === "site" || state.tab === "history" || state.tab === "requests" || state.tab === "suggest" ||
       ((state.tab === "rooms" || state.tab === "owners") && !can("rooms_edit")) || (state.tab === "centers" && !can("centers_edit"));
-    if (state.tab === "home") renderHome(); else if (state.tab === "share") renderShare(); else if (state.tab === "rooms") renderRooms(); else if (state.tab === "requests") renderRequests(); else if (state.tab === "suggest") renderSuggestions(); else if (state.tab === "staff") renderStaff();
+    if (state.tab === "home") renderHome(); else if (state.tab === "share") renderShare(); else if (state.tab === "site") renderSite(); else if (state.tab === "rooms") renderRooms(); else if (state.tab === "requests") renderRequests(); else if (state.tab === "suggest") renderSuggestions(); else if (state.tab === "staff") renderStaff();
     else if (state.tab === "owners") renderOwners(); else if (state.tab === "history") renderHistory(); else renderCenters();
   }
   function ownerName(id) { var o = state.owners.filter(function (x) { return x.id === id; })[0]; return o ? o.name : ""; }
@@ -257,6 +258,42 @@
       c.toBlob(function (b) { var a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = "qareeb-qr.png"; document.body.appendChild(a); a.click(); document.body.removeChild(a); setTimeout(function () { URL.revokeObjectURL(a.href); }, 2000); }, "image/png");
     };
     img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(xml);
+  }
+
+  // ------------------------------------------------------------ edit website (wording + WhatsApp number)
+  function renderSite() {
+    var ST = window.QAREEB_SITETEXT || { groups: [], en: {}, ar: {} }, cur = (state.site && state.site.data) || {};
+    var field = function (f) {
+      var one = function (l, dir) {
+        var val = (cur[l] && cur[l][f.k]) || "", ph = esc(ST[l][f.k] || "");
+        return '<div><small class="help">' + (l === "en" ? "English" : "العربية") + "</small>" +
+          (f.long ? '<textarea name="' + l + "." + f.k + '" maxlength="400" placeholder="' + ph + '"' + (dir ? ' dir="rtl"' : "") + ' style="min-height:76px;width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;font:inherit;background:#fff;color:var(--ink)">' + esc(val) + "</textarea>"
+                  : '<input name="' + l + "." + f.k + '" maxlength="400" placeholder="' + ph + '"' + (dir ? ' dir="rtl"' : "") + ' value="' + esc(val) + '">') + "</div>";
+      };
+      return '<div class="fld"><span>' + esc(f.label) + '</span><div class="row2" style="grid-template-columns:repeat(auto-fit,minmax(240px,1fr))">' + one("en", false) + one("ar", true) + "</div></div>";
+    };
+    var wa = cur.whatsapp || "";
+    $("list").innerHTML = '<form id="siteForm">' +
+      '<div class="sharecard"><h2>WhatsApp number</h2><p class="help">Every WhatsApp button on the student website uses this number: Contact, Ask on WhatsApp and the video-tour request.</p>' +
+      '<div class="fld" style="max-width:340px;margin:12px 0 0"><label for="s-wa">Number with country code, digits only</label><input id="s-wa" name="whatsapp" inputmode="numeric" autocomplete="off" maxlength="20" placeholder="e.g. 60123456789" value="' + esc(wa) + '">' +
+      '<p class="help">Malaysia starts with 60, with no 0 and no + sign. Example: 012-345 6789 becomes 60123456789.' + (wa ? "" : " <b>No number saved yet, so the website still uses a placeholder number.</b>") + "</p></div></div>" +
+      '<p class="help" style="margin:0 0 10px">Left box: English. Right box: Arabic. The grey text is the original wording. <b>Leave a box empty to keep the original.</b></p>' +
+      ST.groups.map(function (g) { return '<div class="sharecard"><h2>' + esc(g.title) + "</h2>" + g.fields.map(field).join("") + "</div>"; }).join("") +
+      '<div class="foot2" style="position:static;justify-content:flex-start;gap:12px;align-items:center"><button class="btn" id="siteSave" type="submit">Save changes</button><a class="btn sec" href="./" target="_blank" rel="noopener">View the student site</a>' +
+      '<span class="help">Students see changes the next time they open or refresh the site.</span></div></form>';
+  }
+  function saveSite(form) {
+    var ST = window.QAREEB_SITETEXT, data = { en: {}, ar: {} };
+    var wa = String(form.elements.whatsapp.value || "").replace(/[\s+\-()]/g, "");
+    if (wa && !/^\d{8,15}$/.test(wa)) { msg("The WhatsApp number must be digits only with the country code, for example 60123456789.", true); return; }
+    if (wa) data.whatsapp = wa;
+    ["en", "ar"].forEach(function (l) {
+      Object.keys(ST[l]).forEach(function (k) { var el = form.elements[l + "." + k]; if (el && el.value.trim()) data[l][k] = el.value.trim().slice(0, 400); });
+    });
+    $("siteSave").disabled = true;
+    api("/rest/v1/site_settings?id=eq.1", { method: "PATCH", body: { data: data }, write: true })
+      .then(function () { msg("Saved. The student website now shows these changes."); return loadAll(); })
+      .catch(function (er) { msg(er.message, true); $("siteSave").disabled = false; });
   }
 
   // ------------------------------------------------------------ home (what needs attention)
@@ -343,7 +380,7 @@
 
   // ------------------------------------------------------------ history (owners only)
   var histFilter = "all";
-  var ENT = { listings: "Room", centers: "Language center", owners: "Owner", staff: "Staff" };
+  var ENT = { listings: "Room", centers: "Language center", owners: "Owner", staff: "Staff", site_settings: "Website" };
   function renderHistory() {
     var chipB = function (v, label) { return '<button type="button" class="fchip' + (histFilter === v ? " on" : "") + '" data-act="hfilter" data-v="' + v + '">' + label + "</button>"; };
     var rows = state.activity.filter(function (a) { return histFilter === "all" || a.entity === histFilter; });
@@ -532,6 +569,9 @@
     }
     else if (act === "editc") openCenterForm(state.centers.filter(function (x) { return x.id === id; })[0]);
     else if (act === "delc") { var c = state.centers.filter(function (x) { return x.id === id; })[0]; if (confirm('Delete "' + c.name_en + '"? Students will no longer be able to pick it.')) api("/rest/v1/centers?id=eq." + encodeURIComponent(id), { method: "DELETE", write: true }).then(function () { msg("Deleted."); loadAll(); }).catch(function (er) { msg(er.message, true); }); }
+  };
+  $("list").onsubmit = function (e) {
+    if (e.target.id === "siteForm") { e.preventDefault(); saveSite(e.target); }
   };
   $("list").oninput = function (e) {
     if (e.target.id === "leadSearch") { lf.q = e.target.value; renderLeadCards(); }

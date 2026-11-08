@@ -11,16 +11,7 @@
   // ---------------------------------------------------------------
   var T = {
     en: {
-      heroTitle: "Find a room within walking distance of your language center",
-      heroSub: "Type your center, see the closest rooms first, and know what has been verified before you pay.",
-      heroEyebrow: "Your guide to student housing in Kuala Lumpur",
       navRooms: "Rooms", navHow: "How it works", navContact: "Contact", menuLabel: "Menu",
-      hiwTitle: "How Qareeb works",
-      hiw1t: "Choose your language center", hiw1d: "Type its name, or drop a pin on the map. Every distance is measured from there.",
-      hiw2t: "See the closest rooms first", hiw2d: "Rooms within walking distance come first, with the cost to move in and what has been verified.",
-      hiw3t: "Reserve or ask", hiw3d: "Hold a verified room for 24 hours, or ask any question on WhatsApp.",
-      hiw4t: "Move in", hiw4d: "We confirm everything on WhatsApp and send you the deposit details.",
-      val1t: "Trust", val2t: "Fast", val3t: "Quality",
       fCampus: "My language center", campusPh: "Type your center, e.g. Britannia",
       fWalk: "Walking distance to my center", walkAny: "Any distance", walk10: "Up to 10 min", walk15: "Up to 15 min", walk20: "Up to 20 min", walk30: "Up to 30 min",
       fArea: "Area", fType: "Type of place", fWho: "Who lives here", fPrice: "Maximum price (RM per month)", fSort: "Sort by",
@@ -40,8 +31,6 @@
       pinOption: "📍 Can't find it? Drop a pin on the map", pinTitle: "Show us where your language center is",
       pinHelp: "Tap the map where your center is. We will show the closest rooms to that spot.", pinUse: "Use this location", pinned: "My pinned location",
       change: "Change", viewMap: "View on Google Maps",
-      foot: "Student housing in Kuala Lumpur and Ampang.",
-      footNote: "Always confirm the details with the owner before you pay.",
       staffLink: "Staff login",
       available: "Available", reserved: "Reserved", taken: "Rented",
       walk: "min walk", ride: "min by car",
@@ -86,16 +75,7 @@
       safe5: "Scammed? Call Malaysia's National Scam Response Centre: 997"
     },
     ar: {
-      heroTitle: "ابحث عن سكن على مسافة مشي من معهدك",
-      heroSub: "اكتب اسم معهدك لتظهر لك أقرب الغرف أولاً، واعرف ما تم التحقق منه قبل أن تدفع.",
-      heroEyebrow: "دليلك للسكن في كوالالمبور",
       navRooms: "الغرف", navHow: "كيف يعمل", navContact: "تواصل معنا", menuLabel: "القائمة",
-      hiwTitle: "كيف يعمل قريب",
-      hiw1t: "اختر معهد اللغة", hiw1d: "اكتب اسمه أو حدّد موقعه على الخريطة، وتُقاس كل المسافات منه.",
-      hiw2t: "شاهد أقرب الغرف أولاً", hiw2d: "تظهر أولاً الغرف القريبة سيراً، مع تكلفة الانتقال وما تم التحقق منه.",
-      hiw3t: "احجز أو اسأل", hiw3d: "احجز غرفة موثّقة لمدة ٢٤ ساعة، أو اسأل أي سؤال عبر واتساب.",
-      hiw4t: "انتقل إلى سكنك", hiw4d: "نؤكد كل شيء عبر واتساب ونرسل لك تفاصيل العربون.",
-      val1t: "الثقة", val2t: "السرعة", val3t: "الجودة",
       fCampus: "معهد اللغة الذي أدرس فيه", campusPh: "اكتب اسم معهدك، مثلاً: بريتانيا",
       fWalk: "مسافة المشي إلى معهدي", walkAny: "أي مسافة", walk10: "حتى ١٠ دقائق", walk15: "حتى ١٥ دقيقة", walk20: "حتى ٢٠ دقيقة", walk30: "حتى ٣٠ دقيقة",
       fArea: "المنطقة", fType: "نوع السكن", fWho: "من يسكن هنا", fPrice: "أعلى سعر (رينغيت ماليزي شهرياً)", fSort: "ترتيب النتائج",
@@ -115,8 +95,6 @@
       pinOption: "📍 لا تجده؟ حدّد الموقع على الخريطة", pinTitle: "أرِنا أين يقع معهد اللغة",
       pinHelp: "اضغط على الخريطة حيث يقع معهدك، وسنعرض لك أقرب الغرف إلى ذلك الموقع.", pinUse: "استخدم هذا الموقع", pinned: "الموقع الذي حددته",
       change: "تغيير", viewMap: "عرض في خرائط جوجل",
-      foot: "سكن الطلاب في كوالالمبور وأمبانغ.",
-      footNote: "تأكد دائماً من التفاصيل مع المالك قبل الدفع.",
       staffLink: "دخول الموظفين",
       available: "متاح", reserved: "محجوز", taken: "تم تأجيره",
       walk: "دقيقة سيراً", ride: "دقيقة بالسيارة",
@@ -161,6 +139,19 @@
       safe5: "هل تعرضت للاحتيال؟ اتصل بمركز الاستجابة الوطني للاحتيال في ماليزيا: 997"
     }
   };
+  // The wording staff can change from the staff area lives in sitetext.js (original wording);
+  // saved changes are loaded from the database and replace it (see applySiteSettings).
+  var ST = window.QAREEB_SITETEXT || { en: {}, ar: {} };
+  ["en", "ar"].forEach(function (l) { Object.keys(ST[l]).forEach(function (k) { T[l][k] = ST[l][k]; }); });
+  function applySiteSettings(rows) {
+    var d = rows && rows[0] && rows[0].data;
+    if (!d || typeof d !== "object") return;
+    if (/^\d{8,15}$/.test(String(d.whatsapp || ""))) CFG.whatsapp = String(d.whatsapp);
+    ["en", "ar"].forEach(function (l) {
+      var o = d[l]; if (!o || typeof o !== "object") return;
+      Object.keys(ST[l]).forEach(function (k) { if (typeof o[k] === "string" && o[k].trim()) T[l][k] = o[k].trim().slice(0, 400); });
+    });
+  }
 
   var lang = "en", view = "list", campus = null, map, markers = [], dmap, pinMap, pinMarker, pinLatLng;
   try { lang = localStorage.getItem("qareeb-lang") || "en"; } catch (e) {}
@@ -647,7 +638,8 @@
   }
   function load() {
     if (!SB || !SB.url) return Promise.resolve();
-    return Promise.all([sbGet("centers?select=*&order=sort"), sbGet("listings?select=*&order=id")]).then(function (res) {
+    return Promise.all([sbGet("centers?select=*&order=sort"), sbGet("listings?select=*&order=id"), sbGet("site_settings?select=data&id=eq.1").catch(function () { return []; })]).then(function (res) {
+      applySiteSettings(res[2]);
       if (res[0].length) CAMPUSES = res[0].map(function (c) { return { id: c.id, group: c.grp, name: { en: esc(c.name_en), ar: esc(c.name_ar || c.name_en) }, lat: c.lat, lng: c.lng, logo: safeUrl(c.logo_url) || "" }; });
       LISTINGS = res[1].map(mapListing);
     }).catch(function (e) { console.warn("Could not load from Supabase", e); loadFailed = true; });

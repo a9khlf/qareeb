@@ -68,12 +68,21 @@
   function logout() { saveSession(null); location.reload(); }
 
   function showPanel() {
-    $("loginBox").hidden = true; $("panel").hidden = false; $("logout").hidden = false;
-    $("who").textContent = (access.name || access.email) + " · " + (ROLES[access.role] ? ROLES[access.role].label : access.role);
+    $("loginBox").hidden = true; $("panel").hidden = false; document.body.classList.add("inapp");
+    var nm = access.name || access.email;
+    $("uName").textContent = nm; $("uRole").textContent = ROLES[access.role] ? ROLES[access.role].label : access.role;
+    $("uAvatar").textContent = (nm.trim().charAt(0) || "Q").toUpperCase();
     var tabs = { requests: can("leads_view"), suggest: can("centers_edit"), staff: can("staff_manage"), owners: can("rooms_edit") || can("leads_view"), history: can("staff_manage"), site: can("site_edit") };
     document.querySelectorAll(".tab").forEach(function (b) { b.hidden = tabs[b.dataset.tab] === false; });
+    document.querySelectorAll(".navgroup").forEach(function (g) { g.hidden = !g.querySelector(".tab:not([hidden])"); });
     loadAll();
   }
+  // side drawer (always open on a computer, slides in on a phone)
+  function openDrawer(on) { $("drawer").classList.toggle("open", on); $("scrim").hidden = !on; }
+  $("menuBtn2").onclick = function () { openDrawer(true); };
+  $("drawerClose").onclick = function () { openDrawer(false); };
+  $("scrim").onclick = function () { openDrawer(false); };
+  $("refreshBtn").onclick = function () { loadAll().then(function () { msg("Updated."); }); };
   function checkAccess() {
     return api("/rest/v1/rpc/my_access", { method: "POST", body: {} }).then(function (a) {
       if (!a) throw new Error("This account has not been given access. Ask the owner to add your email in the Staff tab.");
@@ -188,11 +197,11 @@
     var newN = state.requests.filter(function (r) { return r.status === "new"; }).length, lt = document.querySelector('[data-tab=requests]');
     if (lt) lt.textContent = "Leads" + (newN ? " (" + newN + " new)" : "");
     $("addBtn").textContent = state.tab === "centers" ? "+ Add center" : state.tab === "staff" ? "+ Add staff member" : state.tab === "owners" ? "+ Add owner" : "+ Add room";
-    var TITLES = { home: "Home", share: "Student site", site: "Edit website", rooms: "Rooms", requests: "Leads", owners: "Owners", centers: "Language centers", suggest: "Center suggestions", staff: "Staff", history: "History" };
+    var TITLES = { home: "Overview", search: "Search results", share: "Student page (share)", site: "Edit website", rooms: "Rooms", requests: "Leads", owners: "Owners", centers: "Language centers", suggest: "Center suggestions", staff: "Team", history: "Audit log" };
     $("pageTitle").textContent = TITLES[state.tab] || "";
-    $("addBtn").hidden = state.tab === "home" || state.tab === "share" || state.tab === "site" || state.tab === "history" || state.tab === "requests" || state.tab === "suggest" ||
+    $("addBtn").hidden = state.tab === "home" || state.tab === "search" || state.tab === "share" || state.tab === "site" || state.tab === "history" || state.tab === "requests" || state.tab === "suggest" ||
       ((state.tab === "rooms" || state.tab === "owners") && !can("rooms_edit")) || (state.tab === "centers" && !can("centers_edit"));
-    if (state.tab === "home") renderHome(); else if (state.tab === "share") renderShare(); else if (state.tab === "site") renderSite(); else if (state.tab === "rooms") renderRooms(); else if (state.tab === "requests") renderRequests(); else if (state.tab === "suggest") renderSuggestions(); else if (state.tab === "staff") renderStaff();
+    if (state.tab === "home") renderHome(); else if (state.tab === "search") renderSearch(); else if (state.tab === "share") renderShare(); else if (state.tab === "site") renderSite(); else if (state.tab === "rooms") renderRooms(); else if (state.tab === "requests") renderRequests(); else if (state.tab === "suggest") renderSuggestions(); else if (state.tab === "staff") renderStaff();
     else if (state.tab === "owners") renderOwners(); else if (state.tab === "history") renderHistory(); else renderCenters();
   }
   function ownerName(id) { var o = state.owners.filter(function (x) { return x.id === id; })[0]; return o ? o.name : ""; }
@@ -296,57 +305,105 @@
       .catch(function (er) { msg(er.message, true); $("siteSave").disabled = false; });
   }
 
-  // ------------------------------------------------------------ home (what needs attention)
+  // ------------------------------------------------------------ overview (Today / Numbers / Team)
+  var homeView = "today";
+  function waitDays(t) { return Math.max(0, Math.floor((Date.now() - new Date(t)) / 86400000)); }
   function renderHome() {
-    var now = new Date(), blocks = [], hour = 3600 * 1000;
+    var views = [["today", "Today"], ["numbers", "Numbers"]];
+    if (can("leads_view")) views.push(["team", "Team"]);
+    if (!views.some(function (v) { return v[0] === homeView; })) homeView = "today";
+    $("list").innerHTML = '<p class="subtext">Pick a tab. Every number opens the records behind it.</p>' +
+      '<div class="subtabs" role="tablist">' + views.map(function (v) { return '<button type="button" class="subtab' + (homeView === v[0] ? " on" : "") + '" data-act="hview" data-v="' + v[0] + '">' + v[1] + "</button>"; }).join("") + "</div>" +
+      (homeView === "numbers" ? homeNumbers() : homeView === "team" ? homeTeam() : homeToday());
+  }
+  function doBlock(title, count, go, rows) {
+    if (!rows.length) return "";
+    return '<div class="item" style="display:block"><div class="dohead"><h3>' + esc(title) + '<span class="n">' + count + '</span></h3><button type="button" data-go="' + go + '">See all</button></div>' + rows.join("") + "</div>";
+  }
+  function doRow(go, q, left, right) { return '<button type="button" class="doitem" data-go="' + go + '"' + (q ? ' data-q="' + esc(q) + '"' : "") + "><span>" + esc(left) + "</span><small>" + esc(right) + "</small></button>"; }
+  function homeToday() {
+    var now = new Date(), hour = 3600 * 1000, out = "";
     var live = state.rooms.filter(function (r) { return r.published; });
     var holds = state.rooms.filter(function (r) { return r.status === "reserved" && r.reserved_until && new Date(r.reserved_until) - now < 24 * hour; });
     var tile = function (n, label, go, hot) { return '<button type="button" class="tile' + (hot && n ? " hot" : "") + '" data-go="' + go + '"><b>' + n + "</b><span>" + label + "</span></button>"; };
     var tiles = "";
     if (can("leads_view")) {
-      var newN = state.requests.filter(function (r) { return r.status === "new"; }).length, dueN = state.requests.filter(isDue).length;
-      tiles += tile(newN, "New leads", "requests:new", true) + tile(dueN, "Follow-ups due", "requests:due", true);
+      var mine = state.requests.filter(function (r) { return r.assigned_to === access.email && r.status !== "rented" && r.status !== "lost"; }).length;
+      tiles += tile(state.requests.filter(function (r) { return r.status === "new"; }).length, "New leads", "requests:new", true) + tile(state.requests.filter(isDue).length, "Follow-ups due", "requests:due", true) + tile(mine, "Open leads assigned to me", "requests:mine", false);
     }
-    tiles += tile(state.rooms.filter(function (r) { return r.status === "available" && r.published; }).length, "Rooms available now", "rooms", false);
-    tiles += tile(holds.length, "Holds ending within 24 hours", "rooms", true);
-    var todo = [];
+    tiles += tile(state.rooms.filter(function (r) { return r.status === "available" && r.published; }).length, "Rooms available now", "rooms", false) + tile(holds.length, "Holds ending within 24 hours", "rooms", true);
+    out += '<div class="tiles">' + tiles + "</div>";
     if (can("leads_view")) {
-      var old = state.requests.filter(function (r) { return r.status === "new" && now - new Date(r.created_at) > 24 * hour; }).length;
-      if (old) todo.push(["requests:new", old + " lead" + (old === 1 ? " has" : "s have") + " been waiting more than a day without a reply."]);
-      state.requests.filter(isDue).slice(0, 5).forEach(function (r) { var room = roomOf(r); todo.push(["requests:due", "Follow up with " + r.name + (room ? " about " + room.title_en : "") + " (was due " + r.follow_up + ")."]); });
+      var news = state.requests.filter(function (r) { return r.status === "new"; });
+      out += doBlock("Leads waiting for a first reply", news.length, "requests:new", news.slice(0, 5).map(function (r) { var room = roomOf(r); return doRow("requests:new", r.name, r.name + (room ? " · " + room.title_en : ""), "Waiting " + waitDays(r.created_at) + " day" + (waitDays(r.created_at) === 1 ? "" : "s")); }));
+      var due = state.requests.filter(isDue);
+      out += doBlock("Follow-ups due", due.length, "requests:due", due.slice(0, 5).map(function (r) { var room = roomOf(r); return doRow("requests:due", r.name, r.name + (room ? " · " + room.title_en : ""), "Due " + r.follow_up); }));
     }
-    holds.slice(0, 5).forEach(function (r) { todo.push(["rooms", (new Date(r.reserved_until) < now ? "Hold expired on " : "Hold ends soon for ") + r.title_en + ". Mark it Rented or Available."]); });
+    out += doBlock("Holds ending soon", holds.length, "rooms", holds.slice(0, 5).map(function (r) { return doRow("rooms", "", r.title_en, new Date(r.reserved_until) < now ? "Hold expired" : "Ends " + when(r.reserved_until)); }));
+    var todo = [];
     var unver = live.filter(function (r) { return !(r.v_video && r.v_owner); }).length;
     if (unver) todo.push(["rooms", unver + " visible room" + (unver === 1 ? " is" : "s are") + " not verified yet."]);
     var nophoto = live.filter(function (r) { return !(r.photos && r.photos.length); }).length;
     if (nophoto) todo.push(["rooms", nophoto + " visible room" + (nophoto === 1 ? " has" : "s have") + " no photos."]);
-    if (can("rooms_edit") || can("leads_view")) {
-      var noowner = state.rooms.filter(function (r) { return !r.owner_id; }).length;
-      if (noowner) todo.push(["owners", noowner + " room" + (noowner === 1 ? " has" : "s have") + " no owner linked."]);
-    }
-    var funnel = "";
-    if (can("leads_view") && state.requests.length) {
-      var counts = {}; state.requests.forEach(function (r) { counts[r.status] = (counts[r.status] || 0) + 1; });
-      var max = Math.max.apply(null, STATUSES.map(function (s) { return counts[s[0]] || 0; }).concat([1]));
-      funnel = '<div class="item" style="display:block"><h3>Leads by status</h3>' + STATUSES.map(function (s) {
-        var n = counts[s[0]] || 0; return '<div class="bar-row"><span>' + s[1] + '</span><i style="width:' + Math.max(2, Math.round(n / max * 100)) + '%"></i><b>' + n + "</b></div>";
-      }).join("") + "</div>";
-      var days = [];
-      for (var d = 6; d >= 0; d--) { var dt = new Date(now - d * 24 * hour), key = dt.getFullYear() + "-" + String(dt.getMonth() + 1).padStart(2, "0") + "-" + String(dt.getDate()).padStart(2, "0"); days.push({ key: key, label: dt.toLocaleDateString([], { weekday: "short" }), n: 0 }); }
-      state.requests.forEach(function (r) { var c = new Date(r.created_at), key = c.getFullYear() + "-" + String(c.getMonth() + 1).padStart(2, "0") + "-" + String(c.getDate()).padStart(2, "0"); days.forEach(function (x) { if (x.key === key) x.n++; }); });
-      var dmax = Math.max.apply(null, days.map(function (x) { return x.n; }).concat([1]));
-      var bySrc = {}, noSrc = 0;
-      state.requests.forEach(function (r) { if (r.referred_by) { var s = bySrc[r.referred_by] = bySrc[r.referred_by] || { n: 0, rented: 0 }; s.n++; if (r.status === "rented") s.rented++; } else noSrc++; });
-      var srcRows = Object.keys(bySrc).sort(function (a, b) { return bySrc[b].n - bySrc[a].n; }).map(function (k) {
-        return '<div class="count-row"><span>' + esc(personName(k)) + '’s link</span><span><b>' + bySrc[k].n + "</b> lead" + (bySrc[k].n === 1 ? "" : "s") + (bySrc[k].rented ? " · " + bySrc[k].rented + " rented" : "") + "</span></div>";
-      }).join("");
-      funnel += '<div class="item" style="display:block"><h3>Where leads come from</h3>' + srcRows +
-        '<div class="count-row"><span>Website (no personal link)</span><span><b>' + noSrc + "</b> lead" + (noSrc === 1 ? "" : "s") + "</span></div></div>";
-      funnel += '<div class="item" style="display:block"><h3>Requests, last 7 days</h3><div class="spark">' + days.map(function (x) { return '<div><i style="height:' + Math.max(3, Math.round(x.n / dmax * 60)) + 'px"></i><b>' + x.n + "</b><span>" + x.label + "</span></div>"; }).join("") + "</div></div>";
-    }
-    $("list").innerHTML = '<div class="tiles">' + tiles + "</div>" +
-      '<div class="item" style="display:block"><h3>Needs attention</h3>' + (todo.length ? todo.map(function (t) { return '<div class="todo"><span>' + esc(t[1]) + '</span><button type="button" class="btn sec sm" data-go="' + t[0] + '">Open</button></div>'; }).join("") : '<p class="meta2" style="margin:6px 0 0">Nothing needs attention right now.</p>') + "</div>" + funnel;
+    if (can("rooms_edit") || can("leads_view")) { var noowner = state.rooms.filter(function (r) { return !r.owner_id; }).length; if (noowner) todo.push(["owners", noowner + " room" + (noowner === 1 ? " has" : "s have") + " no owner linked."]); }
+    if (!live.length && state.rooms.length) todo.push(["rooms", "No room is visible to students yet. Students see an empty page."]);
+    out += '<div class="item" style="display:block"><h3>Set-up checklist</h3>' + (todo.length ? todo.map(function (t) { return '<div class="todo"><span>' + esc(t[1]) + '</span><button type="button" class="btn sec sm" data-go="' + t[0] + '">Open</button></div>'; }).join("") : '<p class="meta2" style="margin:6px 0 0">Everything is set up.</p>') + "</div>";
+    return out;
   }
+  function homeNumbers() {
+    var now = new Date(), hour = 3600 * 1000, out = "";
+    var rc = { available: 0, reserved: 0, taken: 0, hidden: 0 };
+    state.rooms.forEach(function (r) { if (!r.published) rc.hidden++; else rc[r.status] = (rc[r.status] || 0) + 1; });
+    var tile = function (n, label, go) { return '<button type="button" class="tile" data-go="' + go + '"><b>' + n + "</b><span>" + label + "</span></button>"; };
+    out += '<div class="tiles">' + tile(rc.available, "Rooms available", "rooms") + tile(rc.reserved, "Rooms held", "rooms") + tile(rc.taken, "Rooms rented", "rooms") + tile(rc.hidden, "Rooms hidden", "rooms") + "</div>";
+    if (!can("leads_view")) return out;
+    if (!state.requests.length) return out + '<p class="meta2">No leads yet. Numbers appear here as students ask about rooms.</p>';
+    var counts = {}; state.requests.forEach(function (r) { counts[r.status] = (counts[r.status] || 0) + 1; });
+    var max = Math.max.apply(null, STATUSES.map(function (s) { return counts[s[0]] || 0; }).concat([1]));
+    out += '<div class="item" style="display:block"><h3>Leads by status</h3>' + STATUSES.map(function (s) {
+      var n = counts[s[0]] || 0; return '<div class="bar-row"><span>' + s[1] + '</span><i style="width:' + Math.max(2, Math.round(n / max * 100)) + '%"></i><b>' + n + "</b></div>";
+    }).join("") + "</div>";
+    var bySrc = {}, noSrc = 0;
+    state.requests.forEach(function (r) { if (r.referred_by) { var s = bySrc[r.referred_by] = bySrc[r.referred_by] || { n: 0, rented: 0 }; s.n++; if (r.status === "rented") s.rented++; } else noSrc++; });
+    out += '<div class="item" style="display:block"><h3>Where leads come from</h3>' + Object.keys(bySrc).sort(function (a, b) { return bySrc[b].n - bySrc[a].n; }).map(function (k) {
+      return '<div class="count-row"><span>' + esc(personName(k)) + '’s link</span><span><b>' + bySrc[k].n + "</b> lead" + (bySrc[k].n === 1 ? "" : "s") + (bySrc[k].rented ? " · " + bySrc[k].rented + " rented" : "") + "</span></div>";
+    }).join("") + '<div class="count-row"><span>Website (no personal link)</span><span><b>' + noSrc + "</b> lead" + (noSrc === 1 ? "" : "s") + "</span></div></div>";
+    var days = [];
+    for (var d = 6; d >= 0; d--) { var dt = new Date(now - d * 24 * hour), key = dt.getFullYear() + "-" + String(dt.getMonth() + 1).padStart(2, "0") + "-" + String(dt.getDate()).padStart(2, "0"); days.push({ key: key, label: dt.toLocaleDateString([], { weekday: "short" }), n: 0 }); }
+    state.requests.forEach(function (r) { var c = new Date(r.created_at), key = c.getFullYear() + "-" + String(c.getMonth() + 1).padStart(2, "0") + "-" + String(c.getDate()).padStart(2, "0"); days.forEach(function (x) { if (x.key === key) x.n++; }); });
+    var dmax = Math.max.apply(null, days.map(function (x) { return x.n; }).concat([1]));
+    out += '<div class="item" style="display:block"><h3>Requests, last 7 days</h3><div class="spark">' + days.map(function (x) { return '<div><i style="height:' + Math.max(3, Math.round(x.n / dmax * 60)) + 'px"></i><b>' + x.n + "</b><span>" + x.label + "</span></div>"; }).join("") + "</div></div>";
+    return out;
+  }
+  function homeTeam() {
+    var rows = state.team.map(function (p) {
+      var mine = state.requests.filter(function (r) { return r.assigned_to === p.email; });
+      var credited = state.requests.filter(function (r) { return r.referred_by === p.email; }).length;
+      return { name: p.name || p.email, rented: mine.filter(function (r) { return r.status === "rented"; }).length, open: mine.filter(function (r) { return r.status !== "rented" && r.status !== "lost"; }).length, credited: credited, due: mine.filter(isDue).length };
+    }).sort(function (a, b) { return b.rented - a.rented || b.credited - a.credited || b.open - a.open; });
+    if (!rows.length) return '<p class="meta2">No team members yet.</p>';
+    return '<div class="item" style="display:block"><h3>Team leaderboard</h3><p class="help" style="margin-bottom:6px">Ranked by rooms rented, then leads brought in through the person’s own link.</p>' + rows.map(function (r, i) {
+      return '<div class="rank"><span class="pos">' + (i + 1) + "</span><span><b>" + esc(r.name) + "</b><small>" + r.credited + " from own link · " + r.open + " open · " + r.due + " follow-up" + (r.due === 1 ? "" : "s") + " due</small></span><b>" + r.rented + " rented</b></div>";
+    }).join("") + "</div>";
+  }
+
+  // ------------------------------------------------------------ global search (top bar)
+  var gq = "";
+  function renderSearch() {
+    var q = gq.toLowerCase(), out = "", has = function () { for (var i = 0; i < arguments.length; i++) if (String(arguments[i] || "").toLowerCase().indexOf(q) >= 0) return true; return false; };
+    var sec = function (title, rows) { return rows.length ? '<div class="item" style="display:block"><h3>' + esc(title) + " (" + rows.length + ")</h3>" + rows.slice(0, 8).join("") + "</div>" : ""; };
+    if (can("leads_view")) out += sec("Leads", state.requests.filter(function (r) { var rm = roomOf(r); return has(r.name, r.whatsapp, rm && rm.title_en); }).map(function (r) { var rm = roomOf(r); return doRow("requests", r.name, r.name + " · " + r.whatsapp, (rm ? rm.title_en + " · " : "") + statusLabel(r.status)); }));
+    out += sec("Rooms", state.rooms.filter(function (r) { return has(r.title_en, r.title_ar, r.area); }).map(function (r) { return doRow("rooms", "", r.title_en, "RM " + r.price + " · " + r.area); }));
+    if (state.owners.length) out += sec("Owners", state.owners.filter(function (o) { return has(o.name, o.phone); }).map(function (o) { return doRow("owners", "", o.name, o.phone || ""); }));
+    out += sec("Language centers", state.centers.filter(function (c) { return has(c.name_en, c.name_ar); }).map(function (c) { return doRow("centers", "", c.name_en, c.grp === "center" ? "Center" : "Area"); }));
+    if (can("staff_manage")) out += sec("Team", state.staff.filter(function (s) { return has(s.name, s.email); }).map(function (s) { return doRow("staff", "", s.name || s.email, s.email); }));
+    $("list").innerHTML = out || '<p class="meta2">Nothing found for “' + esc(gq) + "”.</p>";
+  }
+  $("gsearch").oninput = function () {
+    gq = this.value.trim();
+    if (gq.length < 2) { if (state.tab === "search") { state.tab = "home"; render(); } return; }
+    state.tab = "search"; render();
+  };
 
   // ------------------------------------------------------------ owners directory
   function renderOwners() {
@@ -531,12 +588,13 @@
     if (g) {   // shortcuts on the Home page
       var gp = g.dataset.go.split(":");
       state.tab = gp[0];
-      if (gp[0] === "requests") { lf.mine = false; lf.status = gp[1] === "new" ? "new" : "all"; lf.due = gp[1] === "due"; lf.q = ""; }
-      render(); window.scrollTo(0, 0); return;
+      if (gp[0] === "requests") { lf.mine = gp[1] === "mine"; lf.status = gp[1] === "new" ? "new" : "all"; lf.due = gp[1] === "due"; lf.q = g.dataset.q || ""; }
+      $("gsearch").value = ""; render(); window.scrollTo(0, 0); return;
     }
     var b = e.target.closest("[data-act]"); if (!b || b.tagName === "SELECT") return;
     var item = b.closest(".item"), id = item ? item.dataset.id : "", act = b.dataset.act;
-    if (act === "copyurl") copyText(b.dataset.url);
+    if (act === "hview") { homeView = b.dataset.v; render(); }
+    else if (act === "copyurl") copyText(b.dataset.url);
     else if (act === "qrdl") downloadQr();
     else if (act === "hfilter") { histFilter = b.dataset.v; render(); }
     else if (act === "edito") openOwnerForm(state.owners.filter(function (x) { return String(x.id) === id; })[0]);
@@ -602,7 +660,7 @@
     }).then(function () { msg("Room deleted."); loadAll(); }).catch(function (er) { msg(er.message, true); });
   }
 
-  document.querySelectorAll(".tab").forEach(function (b) { b.onclick = function () { state.tab = b.dataset.tab; render(); }; });
+  document.querySelectorAll(".tab").forEach(function (b) { b.onclick = function () { state.tab = b.dataset.tab; $("gsearch").value = ""; openDrawer(false); render(); window.scrollTo(0, 0); }; });
   $("addBtn").onclick = function () { if (state.tab === "centers") openCenterForm(null); else if (state.tab === "staff") openStaffForm(null); else if (state.tab === "owners") openOwnerForm(null); else openRoomForm(null); };
   // Creating / re-passwording / deleting a LOGIN needs a secret key, so a small server-side function does it (owners only).
   function staffFn(action, email, password) {

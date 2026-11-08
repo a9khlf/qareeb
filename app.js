@@ -158,15 +158,25 @@
   // Share links can open the site in a chosen language (?lang=ar) and for a chosen center (?center=id)
   var urlParams = new URLSearchParams(location.search);
   if (urlParams.get("lang") === "ar" || urlParams.get("lang") === "en") { lang = urlParams.get("lang"); try { localStorage.setItem("qareeb-lang", lang); } catch (e) {} }
-  // A staff member's personal link (?ref=code) is remembered for 30 days, so a request sent later is credited to them.
+  // A staff member's personal link (?ref=code) or a named link (?s=name, short form /s/name) is remembered
+  // for 30 days, so a request sent later is credited to it.
+  var linkFromUrl = (urlParams.get("s") || "").toLowerCase().replace(/[^a-z0-9-]/g, "").slice(0, 30);
   (function () {
-    var r = (urlParams.get("ref") || "").replace(/[^A-Za-z0-9]/g, "").slice(0, 20);
+    var r = linkFromUrl || (urlParams.get("ref") || "").replace(/[^A-Za-z0-9-]/g, "").slice(0, 30);
     if (r) { try { localStorage.setItem("qareeb-ref", JSON.stringify({ c: r, t: Date.now() })); } catch (e) {} }
   })();
   function currentRef() {
     try { var s = JSON.parse(localStorage.getItem("qareeb-ref") || "null"); if (s && s.c && Date.now() - s.t < 30 * 864e5) return s.c; } catch (e) {}
     return null;
   }
+  // Counts a named link's visit ('open' on arrival, 'look' once rooms are shown) and returns the link's own WhatsApp number, if it has one.
+  function linkVisit(event) {
+    var code = currentRef();
+    if (!code || !SB || !SB.url) return Promise.resolve(null);
+    return fetch(SB.url + "/rest/v1/rpc/link_visit", { method: "POST", headers: { apikey: SB.key, "Content-Type": "application/json" }, body: JSON.stringify({ p_slug: code, p_event: event }) })
+      .then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; });
+  }
+  function onceThisSession(key) { try { if (sessionStorage.getItem(key)) return false; sessionStorage.setItem(key, "1"); } catch (e) {} return true; }
   var $ = function (id) { return document.getElementById(id); };
   var t = function (k) { return T[lang][k] || k; };
   var pick = function (o) { return o[lang] || o.en; };
@@ -335,6 +345,7 @@
 
   function render() {
     var list = filtered(), g = $("grid"), html = "";
+    if (list.length && campus && currentRef() && onceThisSession("qareeb-look")) linkVisit("look");
     $("count").textContent = list.length + " " + t(list.length === 1 ? "resultOne" : "resultMany");
     $("empty").textContent = loadFailed ? t("loadErr") : t("empty");
     $("empty").hidden = list.length > 0 && !loadFailed;
@@ -707,5 +718,10 @@
     ["rooms", "how"].forEach(function (id) { var el = $(id); if (el) io.observe(el); });
   }
 
-  load().then(function () { restoreCampus(); applyLang(); });
+  var visitEvent = linkFromUrl && onceThisSession("qareeb-open-" + linkFromUrl) ? "open" : "info";
+  Promise.all([load(), linkVisit(visitEvent)]).then(function (res) {
+    var v = res[1];
+    if (v && v.ok && /^\d{8,15}$/.test(String(v.whatsapp || ""))) CFG.whatsapp = String(v.whatsapp);   // a link's own number wins
+    restoreCampus(); applyLang();
+  });
 })();

@@ -2,7 +2,7 @@
   "use strict";
   var SB = window.QAREEB_SUPABASE, KEY = "qareeb-admin-session";
   var $ = function (id) { return document.getElementById(id); };
-  var state = { tab: "home", rooms: [], centers: [], requests: [], suggestions: [], staff: [], notes: {}, team: [], owners: [], activity: [] };
+  var state = { tab: "home", rooms: [], centers: [], requests: [], suggestions: [], staff: [], notes: {}, team: [], owners: [], activity: [], links: [], linkEvents: [] };
   var session = null, access = null;
   var ROLES = {
     owner:      { label: "Owner",            note: "Everything, including staff and their access." },
@@ -168,8 +168,10 @@
       can("leads_view") ? api("/rest/v1/rpc/staff_directory", { method: "POST", body: {} }).catch(none) : none(),
       (can("rooms_edit") || can("leads_view")) ? api("/rest/v1/owners?select=*&order=name").catch(none) : none(),
       can("staff_manage") ? api("/rest/v1/activity_log?select=*&order=at.desc&limit=300").catch(none) : none(),
-      can("site_edit") ? api("/rest/v1/site_settings?select=*&id=eq.1").catch(none) : none()
-    ]).then(function (r) { state.site = (r[9] && r[9][0]) || null; state.rooms = r[0] || []; state.centers = r[1] || []; state.requests = r[2] || []; state.suggestions = r[3] || []; state.staff = r[4] || []; state.team = r[6] || []; state.owners = r[7] || []; state.activity = r[8] || []; groupNotes(r[5] || []); render(); })
+      can("site_edit") ? api("/rest/v1/site_settings?select=*&id=eq.1").catch(none) : none(),
+      api("/rest/v1/share_links?select=*&order=created_at").catch(none),
+      can("leads_view") ? api("/rest/v1/link_events?select=slug,event,at&at=gte." + encodeURIComponent(new Date(Date.now() - 30 * 864e5).toISOString()) + "&order=at.desc&limit=10000").catch(none) : none()
+    ]).then(function (r) { state.links = r[10] || []; state.linkEvents = r[11] || []; state.site = (r[9] && r[9][0]) || null; state.rooms = r[0] || []; state.centers = r[1] || []; state.requests = r[2] || []; state.suggestions = r[3] || []; state.staff = r[4] || []; state.team = r[6] || []; state.owners = r[7] || []; state.activity = r[8] || []; groupNotes(r[5] || []); render(); })
       .catch(function (e) { msg("Could not load data: " + e.message, true); });
   }
 
@@ -218,8 +220,8 @@
     if (shareLang) q.push("lang=" + shareLang);
     return siteBase() + (q.length ? "?" + q.join("&") : "");
   }
-  function shareText(url) {
-    return shareLang === "ar"
+  function shareText(url, l) {
+    return (l === undefined ? shareLang : l) === "ar"
       ? "تبحث عن سكن قريب من معهدك في كوالالمبور؟ اعثر على أقرب الغرف هنا: " + url
       : "Looking for a room near your language center in Kuala Lumpur? Find the closest rooms here: " + url;
   }
@@ -229,25 +231,94 @@
     var q = window.qrcode(0, "M"); q.addData(url); q.make();
     return q.createSvgTag({ cellSize: 6, margin: 0, scalable: true });
   }
+  var shareQr = "general";   // which link the QR code shows: "general", "mine" or "link:<slug>"
+  function linkUrl(slug, l) { return siteBase() + "s/" + slug + (l ? "/" + l : ""); }
+  function generalUrl(l) { return siteBase() + (l ? "?lang=" + l : ""); }
+  function mineUrl(l) { return siteBase() + "?ref=" + encodeURIComponent(access.ref_code) + (l ? "&lang=" + l : ""); }
+  function waShareLang(url, l) { return "https://wa.me/?text=" + encodeURIComponent(shareText(url, l)); }
+  function linkGroup(title, sub, mk) {
+    var variants = [["Start", ""], ["English", "en"], ["العربية", "ar"]];
+    return '<div class="lgroup"><div class="lg-head"><b>' + esc(title) + "</b><small>" + esc(sub) + '</small></div><div class="lg-btns">' + variants.map(function (v) {
+      var u = mk(v[1]);
+      return '<span class="lg-v"><button class="lgbtn" type="button" data-act="copyurl" data-url="' + esc(u) + '" title="Copy this link">' + (v[1] === "ar" ? '<span dir="rtl">' + v[0] + "</span>" : v[0]) + ' <i>copy</i></button>' +
+        '<a class="lgic" target="_blank" rel="noopener" href="' + esc(u) + '" title="Open">open</a><a class="lgic wa" target="_blank" rel="noopener" href="' + esc(waShareLang(u, v[1])) + '" title="Send on WhatsApp">WhatsApp</a></span>';
+    }).join("") + "</div></div>";
+  }
+  function linkCounts() {
+    var c = {}, since = Date.now() - 30 * 864e5;
+    state.linkEvents.forEach(function (e) { var x = c[e.slug] = c[e.slug] || { open: 0, look: 0, ask: 0 }; x[e.event]++; });
+    state.requests.forEach(function (r) { if (r.link_slug && new Date(r.created_at) >= since) { var x = c[r.link_slug] = c[r.link_slug] || { open: 0, look: 0, ask: 0 }; x.ask++; } });
+    return c;
+  }
   function renderShare() {
-    var url = siteLink(), svg = qrSvg(url);
+    var manage = can("site_edit"), counts = linkCounts(), seeCounts = can("leads_view");
+    var active = state.links.filter(function (k) { return k.active; });
+    var qrUrl = shareQr === "mine" && access.ref_code ? mineUrl("") : shareQr.indexOf("link:") === 0 ? linkUrl(shareQr.slice(5), "") : generalUrl("");
+    var svg = qrSvg(qrUrl);
+    var qopt = function (v, label) { return '<option value="' + esc(v) + '"' + (shareQr === v ? " selected" : "") + ">" + esc(label) + "</option>"; };
     var centersList = state.centers.filter(function (c) { return c.grp === "center"; });
-    var opt = function (v, label) { return '<option value="' + v + '"' + (shareLang === v ? " selected" : "") + ">" + label + "</option>"; };
-    $("list").innerHTML =
-      '<div class="sharecard"><h2>Link for students</h2><p class="help">Send this to students, post it in your WhatsApp groups, or print the QR code on a poster. It opens the Qareeb website.</p>' +
-      '<div class="fld" style="max-width:320px;margin:12px 0 0"><label for="shareLang">Language the link opens in</label><select id="shareLang">' + opt("", "The student’s own choice") + opt("en", "English") + opt("ar", "العربية (Arabic)") + "</select></div>" +
-      (access && access.ref_code ? '<label class="chk" style="margin:4px 0 0"><input type="checkbox" id="shareRef"' + (shareRef ? " checked" : "") + '> Credit leads to me (adds my personal code to every link on this page)</label>' +
-        '<p class="help" style="margin:0 0 4px">A student who opens a link with your code and then asks about a room, asks for a video tour or reserves becomes a lead credited to you, and starts out assigned to you. The code is remembered for 30 days on that student’s phone.</p>' : "") +
-      '<div class="linkrow"><input id="shareUrl" readonly value="' + esc(url) + '" aria-label="Student link">' +
-      '<button class="btn sm" type="button" data-act="copyurl" data-url="' + esc(url) + '">Copy link</button>' +
-      '<a class="btn wa sm" target="_blank" rel="noopener" href="' + esc(waShare(url)) + '">Share on WhatsApp</a>' +
-      '<a class="btn sec sm" target="_blank" rel="noopener" href="' + esc(url) + '">Open</a></div>' +
-      (svg ? '<div class="qrbox"><div class="qr" id="qrBox">' + svg + '</div><div><button class="btn sec sm" type="button" data-act="qrdl">Download QR code</button><p class="help" style="margin-top:8px">Scanning it with a phone camera opens the same link.</p></div></div>' : '<p class="help">The QR code could not load (no internet connection to the code library).</p>') + "</div>" +
-      '<div class="sharecard"><h2>Link for one language center</h2><p class="help">Opens the website already set to that center, so the student sees the closest rooms straight away. Use it in a center’s WhatsApp group.</p>' +
+    var lopt = function (v, label) { return '<option value="' + v + '"' + (shareLang === v ? " selected" : "") + ">" + label + "</option>"; };
+    var agentOpts = '<option value="">Nobody</option>' + state.team.map(function (p) { return '<option value="' + esc(p.email) + '">' + esc(p.name || p.email) + "</option>"; }).join("");
+
+    var html = '<div class="sharecard"><h2>Copy a link and send it</h2><p class="help">The first button of each row opens the start of the website and the student picks their own language. The language buttons open it already in that language. <b>Open</b> shows you the page, <b>WhatsApp</b> opens WhatsApp with the link ready to send.</p>' +
+      linkGroup("Qareeb website", "General link", generalUrl) +
+      (access.ref_code ? linkGroup("My personal link", "Leads from it are credited to you", mineUrl) : "") +
+      active.map(function (k) { return linkGroup(k.name, "/s/" + k.slug + (k.agent_email ? " · " + personName(k.agent_email) : "") + (k.whatsapp ? " · own WhatsApp" : ""), function (l) { return linkUrl(k.slug, l); }); }).join("") + "</div>";
+
+    html += '<div class="sharecard"><h2>Links and who opened them (last 30 days)</h2><p class="help">Each person, agent or group can have its own link. You then see how many students opened it, looked at rooms and asked.</p>' +
+      (state.links.length ? '<div style="overflow-x:auto"><table class="lt"><thead><tr><th>Link</th><th>Address</th><th>Agent</th><th>Opened</th><th>Looked at rooms</th><th>Asked</th><th></th></tr></thead><tbody>' + state.links.map(function (k) {
+        var c = counts[k.slug] || { open: 0, look: 0, ask: 0 };
+        return '<tr class="' + (k.active ? "" : "off") + '" data-id="' + k.id + '"><td><b>' + esc(k.name) + "</b>" + (k.active ? "" : ' <span class="chip off">Switched off</span>') + (k.whatsapp ? '<br><small>WhatsApp ' + esc(k.whatsapp) + "</small>" : "") + "</td><td>/s/" + esc(k.slug) + "</td><td>" + esc(k.agent_email ? personName(k.agent_email) : "—") + "</td>" +
+          "<td>" + (seeCounts ? c.open : "–") + "</td><td>" + (seeCounts ? c.look : "–") + "</td><td>" + (seeCounts ? c.ask : "–") + "</td>" +
+          "<td>" + (manage ? '<button class="btn sec sm" type="button" data-act="lkedit">Edit</button> <button class="btn sec sm" type="button" data-act="lkoff">' + (k.active ? "Switch off" : "Switch on") + "</button>" : "") + "</td></tr>";
+      }).join("") + "</tbody></table></div>" : '<p class="meta2">No links yet.' + (manage ? " Create the first one below." : "") + "</p>") +
+      (manage ? '<form id="linkForm" class="linkform"><h3>Create a link</h3>' +
+        '<div class="row2" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">' +
+        '<div class="fld"><label for="lk-n">Name of the link</label><input id="lk-n" name="name" required maxlength="80" placeholder="e.g. Sara, Britannia WhatsApp group"></div>' +
+        '<div class="fld"><label for="lk-s">Address ending</label><input id="lk-s" name="slug" required maxlength="30" pattern="[a-z0-9][a-z0-9\\-]{1,29}" placeholder="e.g. sara"><p class="help">Letters, numbers and dashes. The link will be /s/<b id="lk-pv">name</b></p></div>' +
+        '<div class="fld"><label for="lk-a">Agent (optional)</label><select id="lk-a" name="agent">' + agentOpts + '</select><p class="help">Leads from this link are credited and assigned to them.</p></div>' +
+        '<div class="fld"><label for="lk-w">WhatsApp for this link (optional)</label><input id="lk-w" name="whatsapp" inputmode="numeric" maxlength="20" placeholder="e.g. 60123456789"><p class="help">If empty, the website’s main number is used.</p></div></div>' +
+        '<button class="btn sm" type="submit" id="lk-save">Create the link</button></form>' : "") + "</div>";
+
+    html += '<div class="sharecard"><h2>QR code</h2><p class="help">Print it on a poster or show it on a screen. Scanning it with a phone camera opens the link.</p>' +
+      '<div class="fld" style="max-width:340px"><label for="qrPick">Link</label><select id="qrPick">' + qopt("general", "Qareeb website (general)") + (access.ref_code ? qopt("mine", "My personal link") : "") + active.map(function (k) { return qopt("link:" + k.slug, k.name + " (/s/" + k.slug + ")"); }).join("") + "</select></div>" +
+      (svg ? '<div class="qrbox"><div class="qr" id="qrBox">' + svg + '</div><div><button class="btn sec sm" type="button" data-act="qrdl">Download QR code</button><p class="help" style="margin-top:8px;word-break:break-all">' + esc(qrUrl) + "</p></div></div>" : '<p class="help">The QR code could not load (no internet connection to the code library).</p>') + "</div>";
+
+    html += '<div class="sharecard"><h2>Links for one language center</h2><p class="help">Opens the website already set to that center, so the student sees the closest rooms straight away. Use it in a center’s WhatsApp group.</p>' +
+      '<div class="fld" style="max-width:320px;margin:12px 0 0"><label for="shareLang">Language the links open in</label><select id="shareLang">' + lopt("", "The student’s own choice") + lopt("en", "English") + lopt("ar", "العربية (Arabic)") + "</select></div>" +
+      (access.ref_code ? '<label class="chk" style="margin:4px 0 8px"><input type="checkbox" id="shareRef"' + (shareRef ? " checked" : "") + "> Credit leads to me (adds my personal code)</label>" : "") +
       (centersList.length ? centersList.map(function (c) {
         var u = siteLink("center=" + encodeURIComponent(c.id));
         return '<div class="centerlink"><span>' + esc(c.name_en) + '</span><button class="btn sec sm" type="button" data-act="copyurl" data-url="' + esc(u) + '">Copy link</button><a class="btn wa sm" target="_blank" rel="noopener" href="' + esc(waShare(u)) + '">WhatsApp</a></div>';
       }).join("") : '<p class="meta2">No language centers yet.</p>') + "</div>";
+    $("list").innerHTML = html;
+  }
+  function slugify(s) { return String(s).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 30); }
+  function saveLink(form) {
+    var wa = String(form.elements.whatsapp.value || "").replace(/[\s+\-()]/g, ""), slug = form.elements.slug.value.trim().toLowerCase();
+    if (wa && !/^\d{8,15}$/.test(wa)) { msg("The WhatsApp number must be digits only with the country code, for example 60123456789.", true); return; }
+    if (!/^[a-z0-9][a-z0-9-]{1,29}$/.test(slug)) { msg("The address needs 2 to 30 letters, numbers or dashes.", true); return; }
+    if (/^[0-9a-f]{6}$/.test(slug)) { msg("Six letters or digits from 0-9 and a-f are kept for personal codes. Please add another letter or a dash.", true); return; }
+    $("lk-save").disabled = true;
+    api("/rest/v1/share_links", { method: "POST", body: { name: form.elements.name.value.trim(), slug: slug, agent_email: form.elements.agent.value || null, whatsapp: wa || null }, write: true })
+      .then(function () { msg("Link created: /s/" + slug); return loadAll(); })
+      .catch(function (er) { msg(/duplicate|unique|already/i.test(er.message) ? "That address is already used. Please pick another." : er.message, true); $("lk-save").disabled = false; });
+  }
+  function openLinkForm(k) {
+    var agentOpts = '<option value="">Nobody</option>' + state.team.map(function (p) { return '<option value="' + esc(p.email) + '"' + (p.email === k.agent_email ? " selected" : "") + ">" + esc(p.name || p.email) + "</option>"; }).join("");
+    $("dform").innerHTML = '<form id="lkf"><h2>Edit link</h2><p class="help" style="margin-bottom:12px">Address: /s/' + esc(k.slug) + " (it cannot be changed, so links you already shared keep working)</p>" +
+      '<div class="fld"><label for="e-n">Name of the link</label><input id="e-n" name="name" required maxlength="80" value="' + esc(k.name) + '"></div>' +
+      '<div class="fld"><label for="e-a">Agent (optional)</label><select id="e-a" name="agent">' + agentOpts + "</select></div>" +
+      '<div class="fld"><label for="e-w">WhatsApp for this link (optional)</label><input id="e-w" name="whatsapp" inputmode="numeric" maxlength="20" value="' + esc(k.whatsapp || "") + '"><p class="help">Empty = use the website’s main number.</p></div>' +
+      '<div class="foot2"><button type="button" class="btn sec" id="cancelBtn">Cancel</button><button type="submit" class="btn" id="saveBtn">Save</button></div></form>';
+    dlg.showModal(); $("cancelBtn").onclick = closeDlg;
+    $("lkf").onsubmit = function (e) {
+      e.preventDefault(); var f = $("lkf"), wa = String(f.whatsapp.value || "").replace(/[\s+\-()]/g, "");
+      if (wa && !/^\d{8,15}$/.test(wa)) { msg("The WhatsApp number must be digits only with the country code, for example 60123456789.", true); return; }
+      $("saveBtn").disabled = true;
+      api("/rest/v1/share_links?id=eq." + k.id, { method: "PATCH", body: { name: f.name.value.trim(), agent_email: f.agent.value || null, whatsapp: wa || null }, write: true })
+        .then(function () { closeDlg(); msg("Saved."); return loadAll(); }).catch(function (er) { msg(er.message, true); $("saveBtn").disabled = false; });
+    };
   }
   function copyText(text) {
     var done = function () { msg("Link copied."); };
@@ -363,11 +434,17 @@
     out += '<div class="item" style="display:block"><h3>Leads by status</h3>' + STATUSES.map(function (s) {
       var n = counts[s[0]] || 0; return '<div class="bar-row"><span>' + s[1] + '</span><i style="width:' + Math.max(2, Math.round(n / max * 100)) + '%"></i><b>' + n + "</b></div>";
     }).join("") + "</div>";
-    var bySrc = {}, noSrc = 0;
-    state.requests.forEach(function (r) { if (r.referred_by) { var s = bySrc[r.referred_by] = bySrc[r.referred_by] || { n: 0, rented: 0 }; s.n++; if (r.status === "rented") s.rented++; } else noSrc++; });
-    out += '<div class="item" style="display:block"><h3>Where leads come from</h3>' + Object.keys(bySrc).sort(function (a, b) { return bySrc[b].n - bySrc[a].n; }).map(function (k) {
-      return '<div class="count-row"><span>' + esc(personName(k)) + '’s link</span><span><b>' + bySrc[k].n + "</b> lead" + (bySrc[k].n === 1 ? "" : "s") + (bySrc[k].rented ? " · " + bySrc[k].rented + " rented" : "") + "</span></div>";
-    }).join("") + '<div class="count-row"><span>Website (no personal link)</span><span><b>' + noSrc + "</b> lead" + (noSrc === 1 ? "" : "s") + "</span></div></div>";
+    var bySrc = {}, byLink = {}, noSrc = 0;
+    state.requests.forEach(function (r) {
+      if (r.link_slug) { var l = byLink[r.link_slug] = byLink[r.link_slug] || { n: 0, rented: 0 }; l.n++; if (r.status === "rented") l.rented++; }
+      else if (r.referred_by) { var s = bySrc[r.referred_by] = bySrc[r.referred_by] || { n: 0, rented: 0 }; s.n++; if (r.status === "rented") s.rented++; }
+      else noSrc++;
+    });
+    var srcRow = function (label, o) { return '<div class="count-row"><span>' + esc(label) + "</span><span><b>" + o.n + "</b> lead" + (o.n === 1 ? "" : "s") + (o.rented ? " · " + o.rented + " rented" : "") + "</span></div>"; };
+    out += '<div class="item" style="display:block"><h3>Where leads come from</h3>' +
+      Object.keys(byLink).sort(function (a, b) { return byLink[b].n - byLink[a].n; }).map(function (k) { var lk = state.links.filter(function (x) { return x.slug === k; })[0]; return srcRow("Link: " + (lk ? lk.name : "/s/" + k), byLink[k]); }).join("") +
+      Object.keys(bySrc).sort(function (a, b) { return bySrc[b].n - bySrc[a].n; }).map(function (k) { return srcRow(personName(k) + "’s personal link", bySrc[k]); }).join("") +
+      '<div class="count-row"><span>Website (no link)</span><span><b>' + noSrc + "</b> lead" + (noSrc === 1 ? "" : "s") + "</span></div></div>";
     var days = [];
     for (var d = 6; d >= 0; d--) { var dt = new Date(now - d * 24 * hour), key = dt.getFullYear() + "-" + String(dt.getMonth() + 1).padStart(2, "0") + "-" + String(dt.getDate()).padStart(2, "0"); days.push({ key: key, label: dt.toLocaleDateString([], { weekday: "short" }), n: 0 }); }
     state.requests.forEach(function (r) { var c = new Date(r.created_at), key = c.getFullYear() + "-" + String(c.getMonth() + 1).padStart(2, "0") + "-" + String(c.getDate()).padStart(2, "0"); days.forEach(function (x) { if (x.key === key) x.n++; }); });
@@ -437,7 +514,7 @@
 
   // ------------------------------------------------------------ history (owners only)
   var histFilter = "all";
-  var ENT = { listings: "Room", centers: "Language center", owners: "Owner", staff: "Staff", site_settings: "Website" };
+  var ENT = { listings: "Room", centers: "Language center", owners: "Owner", staff: "Staff", site_settings: "Website", share_links: "Link" };
   function renderHistory() {
     var chipB = function (v, label) { return '<button type="button" class="fchip' + (histFilter === v ? " on" : "") + '" data-act="hfilter" data-v="' + v + '">' + label + "</button>"; };
     var rows = state.activity.filter(function (a) { return histFilter === "all" || a.entity === histFilter; });
@@ -507,7 +584,8 @@
     var chipsH = '<span class="chip st-' + esc(r.status) + '">' + esc(statusLabel(r.status)) + "</span>" +
       (r.kind === "reserve" ? '<span class="chip off">RESERVATION</span>' : "") + (r.kind === "tour" ? '<span class="chip">VIDEO TOUR</span>' : "") +
       '<span class="chip">' + esc(personName(r.assigned_to)) + "</span>" +
-      (r.referred_by ? '<span class="chip ok">From ' + esc(personName(r.referred_by)) + "’s link</span>" : "") +
+      (r.referred_by && !r.link_slug ? '<span class="chip ok">From ' + esc(personName(r.referred_by)) + "’s link</span>" : "") +
+      (r.link_slug ? '<span class="chip ok">Link: ' + esc((state.links.filter(function (k) { return k.slug === r.link_slug; })[0] || { name: "/s/" + r.link_slug }).name) + "</span>" : "") +
       (r.follow_up ? '<span class="chip ' + (isDue(r) ? "off" : "") + '">' + (isDue(r) ? "Follow up due " : "Follow up ") + esc(r.follow_up) + "</span>" : "");
     var acts = "";
     if (edit) {
@@ -593,7 +671,12 @@
     }
     var b = e.target.closest("[data-act]"); if (!b || b.tagName === "SELECT") return;
     var item = b.closest(".item"), id = item ? item.dataset.id : "", act = b.dataset.act;
-    if (act === "hview") { homeView = b.dataset.v; render(); }
+    if (act === "lkoff") {
+      var kk = state.links.filter(function (x) { return String(x.id) === (b.closest("tr") ? b.closest("tr").dataset.id : ""); })[0];
+      if (kk) api("/rest/v1/share_links?id=eq." + kk.id, { method: "PATCH", body: { active: !kk.active }, write: true }).then(function () { msg(kk.active ? "Switched off. The link no longer counts visits or credits anyone." : "Switched on."); return loadAll(); }).catch(function (er) { msg(er.message, true); });
+    }
+    else if (act === "lkedit") { var k2 = state.links.filter(function (x) { return String(x.id) === (b.closest("tr") ? b.closest("tr").dataset.id : ""); })[0]; if (k2) openLinkForm(k2); }
+    else if (act === "hview") { homeView = b.dataset.v; render(); }
     else if (act === "copyurl") copyText(b.dataset.url);
     else if (act === "qrdl") downloadQr();
     else if (act === "hfilter") { histFilter = b.dataset.v; render(); }
@@ -630,12 +713,16 @@
   };
   $("list").onsubmit = function (e) {
     if (e.target.id === "siteForm") { e.preventDefault(); saveSite(e.target); }
+    if (e.target.id === "linkForm") { e.preventDefault(); saveLink(e.target); }
   };
   $("list").oninput = function (e) {
     if (e.target.id === "leadSearch") { lf.q = e.target.value; renderLeadCards(); }
+    if (e.target.id === "lk-n") { var sl = $("lk-s"); if (sl && !sl.dataset.touched) { sl.value = slugify(e.target.value); $("lk-pv").textContent = sl.value || "name"; } }
+    if (e.target.id === "lk-s") { e.target.dataset.touched = "1"; e.target.value = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""); $("lk-pv").textContent = e.target.value || "name"; }
   };
   $("list").onchange = function (e) {
     var act = e.target.dataset.act, lid = e.target.closest(".item") ? e.target.closest(".item").dataset.id : "";
+    if (e.target.id === "qrPick") { shareQr = e.target.value; renderShare(); return; }
     if (e.target.id === "shareLang") { shareLang = e.target.value; renderShare(); return; }
     if (e.target.id === "shareRef") { shareRef = e.target.checked; renderShare(); return; }
     if (act === "lstatus") patchLead(lid, { status: e.target.value }, "Status updated.");

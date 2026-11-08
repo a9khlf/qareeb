@@ -83,7 +83,7 @@
   // Login box has four modes: sign in, first-time account, forgot password, set a new password (from the emailed link).
   var mode = "login", recoveryToken = null;
   var MODES = {
-    login:  { h: "Staff sign-in",       p: "Sign in with your own account.",                                       btn: "Log in",             pw: true,  newpw: false },
+    login:  { h: "Staff sign-in",       p: "Use the email and password the owner gave you.",                                    btn: "Log in",             pw: true,  newpw: false },
     signup: { h: "Create your account", p: "Use the email the owner added for you. We will email you a link to confirm it.", btn: "Create account", pw: true,  newpw: true },
     forgot: { h: "Forgot password",     p: "Enter your email and we will send you a link to choose a new password.", btn: "Send the link",    pw: false, newpw: false },
     reset:  { h: "Choose a new password", p: "At least 8 characters.",                                             btn: "Save new password",  pw: true,  newpw: true }
@@ -95,7 +95,7 @@
     $("email").required = (m !== "reset"); $("pw").required = c.pw;
     $("pw").autocomplete = c.newpw ? "new-password" : "current-password"; $("pw").minLength = c.newpw ? 8 : 0;
     $("pwLabel").textContent = m === "reset" ? "New password" : "Password";
-    $("toSignup").hidden = m !== "login"; $("toForgot").hidden = m !== "login"; $("toLogin").hidden = m === "login";
+    $("toSignup").hidden = true; $("toForgot").hidden = m !== "login"; $("toLogin").hidden = m === "login";
     msg("");
   }
   var REDIRECT = location.origin + location.pathname;
@@ -186,7 +186,7 @@
     if (state.tab === "rooms") renderRooms(); else if (state.tab === "requests") renderRequests(); else if (state.tab === "suggest") renderSuggestions(); else if (state.tab === "staff") renderStaff(); else renderCenters();
   }
   function renderStaff() {
-    var intro = '<p class="meta2" style="margin:0 0 12px">Add a person by email and choose their role. They then open this page, click <b>Create your account</b>, and confirm their email. Nothing is shown to them until you add their email here. Switch someone off at any time.</p>';
+    var intro = '<p class="meta2" style="margin:0 0 12px">Add a person with their email, a role and a password, then give them those details. They log in on this page with them. Use <b>Edit access</b> to change their role, their switches or their password, and <b>Switch off</b> to stop access at any time.</p>';
     $("list").innerHTML = intro + state.staff.map(function (s) {
       var on = SWITCHES.filter(function (x) { return s.role === "owner" || s[x[0]]; }).map(function (x) { return '<span class="chip">' + esc(x[1].replace(/ \(.*\)$/, "")) + "</span>"; }).join("") || '<span class="meta2">Can look only</span>';
       var me = access && s.email === access.email;
@@ -257,7 +257,7 @@
     var item = b.closest(".item"), id = item.dataset.id, act = b.dataset.act;
     if (act === "edits") openStaffForm(state.staff.filter(function (x) { return x.email === id; })[0]);
     else if (act === "actives") { var st = state.staff.filter(function (x) { return x.email === id; })[0]; patchStaff(st.email, { active: !st.active }, st.active ? "Switched off. They can no longer use the admin page." : "Switched on."); }
-    else if (act === "dels") { if (confirm("Remove " + id + " from the staff list? They will lose all access.")) api("/rest/v1/staff?email=eq." + encodeURIComponent(id), { method: "DELETE", write: true }).then(function () { msg("Removed."); loadAll(); }).catch(function (er) { msg(er.message, true); }); }
+    else if (act === "dels") { if (confirm("Remove " + id + "? Their login is deleted and they lose all access.")) api("/rest/v1/staff?email=eq." + encodeURIComponent(id), { method: "DELETE", write: true }).then(function () { return staffFn("remove", id).catch(function () { msg("Access removed, but the login itself could not be deleted. It has no access.", true); }); }).then(function () { if (!$("msg").classList.contains("err")) msg("Removed."); loadAll(); }).catch(function (er) { msg(er.message, true); }); }
     else if (act === "edit") openRoomForm(state.rooms.filter(function (x) { return String(x.id) === id; })[0]);
     else if (act === "toggle") { var r = state.rooms.filter(function (x) { return String(x.id) === id; })[0]; patchRoom(r.id, { published: !r.published }, r.published ? "Room hidden from the website." : "Room is now visible."); }
     else if (act === "del") deleteRoom(state.rooms.filter(function (x) { return String(x.id) === id; })[0]);
@@ -292,6 +292,22 @@
 
   document.querySelectorAll(".tab").forEach(function (b) { b.onclick = function () { state.tab = b.dataset.tab; render(); }; });
   $("addBtn").onclick = function () { if (state.tab === "centers") openCenterForm(null); else if (state.tab === "staff") openStaffForm(null); else openRoomForm(null); };
+  // Creating / re-passwording / deleting a LOGIN needs a secret key, so a small server-side function does it (owners only).
+  function staffFn(action, email, password) {
+    return token().then(function (tk) {
+      return fetch(SB.url + "/functions/v1/staff-admin", { method: "POST", headers: { apikey: SB.key, Authorization: "Bearer " + tk, "Content-Type": "application/json" }, body: JSON.stringify({ action: action, email: email, password: password || "" }) });
+    }).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (j) {
+        if (!r.ok) throw new Error(j.error || j.message || (r.status === 404 ? "The staff-login service is not set up yet." : "Error " + r.status));
+        return j;
+      });
+    });
+  }
+  function suggestPassword() {
+    var chars = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789", out = "", a = new Uint32Array(12);
+    crypto.getRandomValues(a); for (var i = 0; i < a.length; i++) out += chars[a[i] % chars.length];
+    return out;
+  }
   function patchStaff(email, body, ok) {
     return api("/rest/v1/staff?email=eq." + encodeURIComponent(email), { method: "PATCH", body: body, write: true }).then(function () { msg(ok); return loadAll(); }).catch(function (er) { msg(er.message, true); loadAll(); });
   }
@@ -301,6 +317,9 @@
     $("dform").innerHTML = '<form id="sf"><h2>' + (isNew ? "Add a staff member" : "Edit access") + "</h2>" +
       '<div class="fld"><label for="s-em">Email</label><input id="s-em" name="email" type="email" required maxlength="120" value="' + esc(s.email) + '"' + (isNew ? "" : " readonly") + ' placeholder="name@example.com"><p class="help">They must use this exact email when they create their account.</p></div>' +
       '<div class="fld"><label for="s-nm">Name</label><input id="s-nm" name="name" maxlength="80" value="' + esc(s.name) + '"></div>' +
+      '<div class="fld"><label for="s-pw">' + (isNew ? "Password for them" : "Set a new password (leave empty to keep theirs)") + '</label>' +
+      '<div style="display:flex;gap:8px"><input id="s-pw" name="pw" type="text" autocomplete="off" minlength="8" maxlength="72"' + (isNew ? " required" : "") + ' style="flex:1"><button type="button" class="btn sec sm" id="pwGen">Suggest one</button></div>' +
+      '<p class="help">At least 8 characters. You will give it to them yourself. They log in on this page with their email and this password.</p></div>' +
       '<div class="fld"><span>Role</span>' + sel("role", roleOpts, s.role) + '<p class="help" id="roleNote"></p></div>' +
       '<fieldset><legend>What this person can do</legend>' + SWITCHES.map(function (x) { return chk(x[0], x[1], s[x[0]]); }).join("") +
       '<p class="help" id="swNote" style="margin-bottom:10px"></p></fieldset>' +
@@ -317,16 +336,33 @@
     SWITCHES.forEach(function (x) { f[x[0]].onchange = function () { if (x[0] === "leads_edit" && f.leads_edit.checked) f.leads_view.checked = true; if (x[0] === "leads_view" && !f.leads_view.checked) f.leads_edit.checked = false; }; });
     note();
     $("cancelBtn").onclick = closeDlg;
+    $("pwGen").onclick = function () { f.pw.value = suggestPassword(); };
+    function ready(email, pw) {   // shown once, so the owner can copy the details
+      $("dform").innerHTML = '<h2>Account ready</h2><p>Give these details to the new staff member. Keep the password private.</p>' +
+        '<div class="item" style="display:block"><div class="count-row"><span>Page</span><b>' + esc(location.origin + location.pathname) + '</b></div>' +
+        '<div class="count-row"><span>Email</span><b>' + esc(email) + '</b></div><div class="count-row"><span>Password</span><b>' + esc(pw) + '</b></div></div>' +
+        '<p class="help">You will not see the password again, but you can set a new one any time with Edit access.</p>' +
+        '<div class="foot2"><button type="button" class="btn" id="doneBtn">Done</button></div>';
+      $("doneBtn").onclick = closeDlg;
+    }
     f.onsubmit = function (e) {
       e.preventDefault();
-      var owner = f.role.value === "owner", p = PRESETS[f.role.value];
+      var owner = f.role.value === "owner", p = PRESETS[f.role.value], pw = f.pw.value;
       var body = { name: f.name.value.trim(), role: f.role.value };
       SWITCHES.forEach(function (x) { body[x[0]] = owner ? !!p[x[0]] : f[x[0]].checked; });
-      if (isNew) { body.email = f.email.value.trim().toLowerCase(); body.active = true; }
-      if (isNew && state.staff.some(function (x) { return x.email === body.email; })) { msg("That email is already on the list.", true); return; }
+      var email = isNew ? f.email.value.trim().toLowerCase() : s.email;
+      if (isNew) { body.email = email; body.active = true; }
+      if (isNew && state.staff.some(function (x) { return x.email === email; })) { msg("That email is already on the list.", true); return; }
+      if (pw && pw.length < 8) { msg("The password needs at least 8 characters.", true); return; }
       $("saveBtn").disabled = true;
-      var req = isNew ? api("/rest/v1/staff", { method: "POST", body: body, write: true }) : api("/rest/v1/staff?email=eq." + encodeURIComponent(s.email), { method: "PATCH", body: body, write: true });
-      req.then(function () { closeDlg(); msg(isNew ? "Added. Ask them to open this page and choose Create your account." : "Saved."); return loadAll(); })
+      var steps;
+      if (isNew) {
+        // create the login first, then give it access; if the login step fails nothing else happens
+        steps = staffFn("create", email, pw).then(function () { return api("/rest/v1/staff", { method: "POST", body: body, write: true }); });
+      } else {
+        steps = api("/rest/v1/staff?email=eq." + encodeURIComponent(s.email), { method: "PATCH", body: body, write: true }).then(function () { return pw ? staffFn("set_password", email, pw) : null; });
+      }
+      steps.then(function () { loadAll(); if (isNew) ready(email, pw); else { closeDlg(); msg(pw ? "Saved, with the new password." : "Saved."); } })
         .catch(function (er) { msg(er.message, true); $("saveBtn").disabled = false; });
     };
   }

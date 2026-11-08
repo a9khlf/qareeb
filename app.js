@@ -54,6 +54,7 @@
       reqNote: "One tap: WhatsApp opens with a ready message about this room.",
       msg: "Hello, I am interested in this accommodation I found on Qareeb: ",
       reserve: "Reserve now", prevPhoto: "Previous photo", nextPhoto: "Next photo", costCard: "Move-in total", costTitle: "Cost to move in", costAdvance: "Rent paid in advance", costDeposit: "Security deposit", costUtil: "Utility deposit", costTotal: "Total to pay at move-in", agrYes: "Written tenancy agreement provided", agrNo: "Written agreement: not confirmed yet", costNote: "Ask for the deposit refund terms in writing before you pay.",
+      tourBtn: "Request a live video tour", msgTour: "Hello, I would like a live video tour of this room I found on Qareeb: ", tourTimes: "The times that suit me: ",
       resTitle: "Reserve this room",
       resIntro: "We will hold this room for you for 24 hours. We confirm on WhatsApp and send the deposit details.",
       resName: "Your name", resPhone: "Your WhatsApp number (with country code)", resSend: "Confirm reservation",
@@ -129,6 +130,7 @@
       reqNote: "بنقرة واحدة: يفتح واتساب برسالة جاهزة عن هذه الغرفة.",
       msg: "مرحباً، أنا مهتم بهذا السكن الذي وجدته على موقع قريب: ",
       reserve: "احجز الآن", prevPhoto: "الصورة السابقة", nextPhoto: "الصورة التالية", costCard: "إجمالي الانتقال", costTitle: "التكلفة عند الانتقال", costAdvance: "إيجار مدفوع مقدماً", costDeposit: "وديعة التأمين", costUtil: "وديعة الخدمات (كهرباء وماء)", costTotal: "الإجمالي عند الانتقال", agrYes: "عقد إيجار مكتوب متوفر", agrNo: "العقد المكتوب: لم يتأكد بعد", costNote: "اطلب كتابةً شروط استرداد الوديعة قبل أن تدفع.",
+      tourBtn: "اطلب جولة فيديو مباشرة", msgTour: "مرحباً، أرغب في جولة فيديو مباشرة لهذه الغرفة التي وجدتها على موقع قريب: ", tourTimes: "الأوقات المناسبة لي: ",
       resTitle: "احجز هذه الغرفة",
       resIntro: "سنحتفظ لك بالغرفة لمدة ٢٤ ساعة، ونؤكد الحجز عبر واتساب ونرسل لك تفاصيل العربون.",
       resName: "اسمك", resPhone: "رقم واتساب الخاص بك (مع رمز الدولة)", resSend: "تأكيد الحجز",
@@ -363,6 +365,11 @@
     sendRequest(l);
     window.open(waLink(t("msg") + plain(l.title.en) + " (#" + l.id + ", " + money(l.price) + (campus ? ", " + plain(pick(campus.name)) : "") + ")"), "_blank", "noopener");
   }
+  // Live video tour: records the request and opens WhatsApp with a ready message (the student adds their times).
+  function tourRoom(l) {
+    sendRequest(l, "tour");
+    window.open(waLink(t("msgTour") + plain(l.title.en) + " (#" + l.id + ", " + money(l.price) + (campus ? ", " + plain(pick(campus.name)) : "") + "). " + t("tourTimes")), "_blank", "noopener");
+  }
   function roomById(id) { return LISTINGS.filter(function (x) { return x.id === id; })[0]; }
 
   // ---- Reserve now: holds a verified room for 24 hours (done safely inside the database) ----
@@ -421,11 +428,12 @@
       (ok ? '<div class="req">' + (canReserve(l)
           ? '<button id="resBtn" class="btn wa" type="button">⚡ ' + t("reserve") + '</button><button id="askBtn" class="btn alt" type="button">💬 ' + t("request") + "</button>"
           : '<button id="askBtn" class="btn wa" type="button">💬 ' + t("request") + "</button>") +
-        '<p class="note">' + t(canReserve(l) ? "resNote2" : "reqNote") + "</p></div>"
+        '<button id="tourBtn" class="btn alt" type="button">🎥 ' + t("tourBtn") + '</button><p class="note">' + t(canReserve(l) ? "resNote2" : "reqNote") + "</p></div>"
         : '<span class="btn wa off">' + t("notAvail") + "</span>") + "</div>";
     $("modal").hidden = false; document.body.style.overflow = "hidden";
     if ($("askBtn")) $("askBtn").onclick = function () { askRoom(l); };
     if ($("resBtn")) $("resBtn").onclick = function () { openReserve(l); };
+    if ($("tourBtn")) $("tourBtn").onclick = function () { tourRoom(l); };
     setTimeout(function () {
       if (dmap) dmap.remove();
       dmap = L.map("dmap", { scrollWheelZoom: false });
@@ -604,12 +612,12 @@
   }
   // One-tap request: no personal data is typed here. The student's real contact reaches you
   // through WhatsApp; this row just records that someone asked about this room.
-  function sendRequest(l) {
+  function sendRequest(l, kind) {
     if (!SB || !SB.url) return;
     fetch(SB.url + "/rest/v1/requests", {
       method: "POST", keepalive: true,
       headers: { apikey: SB.key, "Content-Type": "application/json", Prefer: "return=minimal" },
-      body: JSON.stringify({ listing_id: l.id, name: "Quick request", whatsapp: "via WhatsApp", center: campus ? campus.id : null })
+      body: JSON.stringify({ listing_id: l.id, name: "Quick request", whatsapp: "via WhatsApp", center: campus ? campus.id : null, kind: kind || "ask" })
     }).catch(function (e) { console.warn("Could not save request", e); });
   }
   var HEX = /^#[0-9a-fA-F]{6}$/;

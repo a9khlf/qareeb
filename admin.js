@@ -124,7 +124,7 @@
       state.requests.map(function (r) {
         var room = state.rooms.filter(function (x) { return x.id === r.listing_id; })[0];
         return '<div class="item" data-id="' + r.id + '"><div class="main"><h3>' + esc(room ? room.title_en : "Deleted room") + '</h3><div class="meta2">' +
-          esc(new Date(r.created_at).toLocaleString()) + " · language center: " + esc(centerName(r.center)) + " · " + (r.kind === "reserve" ? "<b>RESERVATION</b> · " : "") + esc(r.name) + " (" + esc(r.whatsapp) + ')</div></div>' +
+          esc(new Date(r.created_at).toLocaleString()) + " · language center: " + esc(centerName(r.center)) + " · " + (r.kind === "reserve" ? "<b>RESERVATION</b> · " : "") + (r.kind === "tour" ? "<b>VIDEO TOUR</b> · " : "") + esc(r.name) + " (" + esc(r.whatsapp) + ')</div></div>' +
           '<button class="btn danger sm" data-act="delreq" type="button">Delete</button></div>';
       }).join("");
   }

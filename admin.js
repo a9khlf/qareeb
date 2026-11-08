@@ -2,8 +2,30 @@
   "use strict";
   var SB = window.QAREEB_SUPABASE, KEY = "qareeb-admin-session";
   var $ = function (id) { return document.getElementById(id); };
-  var state = { tab: "rooms", rooms: [], centers: [], requests: [], suggestions: [] };
-  var session = null;
+  var state = { tab: "rooms", rooms: [], centers: [], requests: [], suggestions: [], staff: [] };
+  var session = null, access = null;
+  var ROLES = {
+    owner:      { label: "Owner",            note: "Everything, including staff and their access." },
+    manager:    { label: "Manager",          note: "Rooms, language centers and student requests." },
+    data_entry: { label: "Data entry",       note: "Adds and edits rooms and photos. Cannot delete or see student contacts." },
+    sales:      { label: "Sales or support", note: "Sees and works on student requests. Cannot edit rooms." },
+    viewer:     { label: "Viewer",           note: "Can look at everything except student contacts. Cannot change anything." }
+  };
+  var PRESETS = {
+    owner:      { rooms_edit: 1, rooms_delete: 1, centers_edit: 1, leads_view: 1, leads_edit: 1 },
+    manager:    { rooms_edit: 1, rooms_delete: 1, centers_edit: 1, leads_view: 1, leads_edit: 1 },
+    data_entry: { rooms_edit: 1, rooms_delete: 0, centers_edit: 0, leads_view: 0, leads_edit: 0 },
+    sales:      { rooms_edit: 0, rooms_delete: 0, centers_edit: 0, leads_view: 1, leads_edit: 1 },
+    viewer:     { rooms_edit: 0, rooms_delete: 0, centers_edit: 0, leads_view: 0, leads_edit: 0 }
+  };
+  var SWITCHES = [
+    ["rooms_edit",   "Add and edit rooms, photos and status"],
+    ["rooms_delete", "Delete rooms"],
+    ["centers_edit", "Add and edit language centers"],
+    ["leads_view",   "See student requests, names and phone numbers"],
+    ["leads_edit",   "Work on and delete student requests (needs the switch above)"]
+  ];
+  function can(p) { return !!(access && access[p]); }
   try { session = JSON.parse(sessionStorage.getItem(KEY)); } catch (e) {}
 
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
@@ -45,31 +67,95 @@
   function logout() { saveSession(null); location.reload(); }
 
   function showPanel() {
-    $("loginBox").hidden = true; $("panel").hidden = false; $("logout").hidden = false; $("who").textContent = session.email;
+    $("loginBox").hidden = true; $("panel").hidden = false; $("logout").hidden = false;
+    $("who").textContent = (access.name || access.email) + " · " + (ROLES[access.role] ? ROLES[access.role].label : access.role);
+    var tabs = { requests: can("leads_view"), suggest: can("centers_edit"), staff: can("staff_manage") };
+    document.querySelectorAll(".tab").forEach(function (b) { b.hidden = tabs[b.dataset.tab] === false; });
     loadAll();
+  }
+  function checkAccess() {
+    return api("/rest/v1/rpc/my_access", { method: "POST", body: {} }).then(function (a) {
+      if (!a) throw new Error("This account has not been given access. Ask the owner to add your email in the Staff tab.");
+      access = a;
+    });
+  }
+
+  // Login box has four modes: sign in, first-time account, forgot password, set a new password (from the emailed link).
+  var mode = "login", recoveryToken = null;
+  var MODES = {
+    login:  { h: "Staff sign-in",       p: "Sign in with your own account.",                                       btn: "Log in",             pw: true,  newpw: false },
+    signup: { h: "Create your account", p: "Use the email the owner added for you. We will email you a link to confirm it.", btn: "Create account", pw: true,  newpw: true },
+    forgot: { h: "Forgot password",     p: "Enter your email and we will send you a link to choose a new password.", btn: "Send the link",    pw: false, newpw: false },
+    reset:  { h: "Choose a new password", p: "At least 8 characters.",                                             btn: "Save new password",  pw: true,  newpw: true }
+  };
+  function setMode(m) {
+    mode = m; var c = MODES[m];
+    $("loginH").textContent = c.h; $("loginP").textContent = c.p; $("loginBtn").textContent = c.btn;
+    $("pwRow").hidden = !c.pw; $("emailRow").hidden = (m === "reset");
+    $("email").required = (m !== "reset"); $("pw").required = c.pw;
+    $("pw").autocomplete = c.newpw ? "new-password" : "current-password"; $("pw").minLength = c.newpw ? 8 : 0;
+    $("pwLabel").textContent = m === "reset" ? "New password" : "Password";
+    $("toSignup").hidden = m !== "login"; $("toForgot").hidden = m !== "login"; $("toLogin").hidden = m === "login";
+    msg("");
+  }
+  var REDIRECT = location.origin + location.pathname;
+  function authPost(path, body) {
+    return fetch(SB.url + path, { method: "POST", headers: { apikey: SB.key, "Content-Type": "application/json" }, body: JSON.stringify(body) })
+      .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { if (!r.ok) throw new Error(j.error_description || j.msg || j.message || "Something went wrong"); return j; }); });
   }
 
   $("loginForm").onsubmit = function (e) {
     e.preventDefault(); msg("");
-    authCall("password", { email: $("email").value.trim(), password: $("pw").value }).then(function (s) {
-      saveSession(s);
-      return api("/rest/v1/rpc/is_admin", { method: "POST", body: {} });
-    }).then(function (ok) {
-      if (ok !== true) { saveSession(null); throw new Error("This account is not an administrator."); }
-      $("pw").value = ""; showPanel();
-    }).catch(function (err) { msg(err.message, true); });
+    var email = $("email").value.trim().toLowerCase(), pw = $("pw").value;
+    if (mode === "login") {
+      authCall("password", { email: email, password: pw }).then(function (s) {
+        saveSession(s); return checkAccess();
+      }).then(function () { $("pw").value = ""; showPanel(); })
+        .catch(function (err) { saveSession(null); msg(err.message, true); });
+    } else if (mode === "signup") {
+      authPost("/auth/v1/signup?redirect_to=" + encodeURIComponent(REDIRECT), { email: email, password: pw }).then(function () {
+        $("pw").value = ""; setMode("login");
+        msg("Almost done. Open the email we just sent you, click the link to confirm, then log in here.");
+      }).catch(function (err) { msg(err.message, true); });
+    } else if (mode === "forgot") {
+      authPost("/auth/v1/recover?redirect_to=" + encodeURIComponent(REDIRECT), { email: email }).then(function () {
+        setMode("login"); msg("If that email has an account, a link to choose a new password is on its way.");
+      }).catch(function (err) { msg(err.message, true); });
+    } else if (mode === "reset") {
+      fetch(SB.url + "/auth/v1/user", { method: "PUT", headers: { apikey: SB.key, Authorization: "Bearer " + recoveryToken, "Content-Type": "application/json" }, body: JSON.stringify({ password: pw }) })
+        .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { if (!r.ok) throw new Error(j.error_description || j.msg || j.message || "Could not save the password"); }); })
+        .then(function () { recoveryToken = null; $("pw").value = ""; setMode("login"); msg("Password saved. You can log in now."); })
+        .catch(function (err) { msg(err.message, true); });
+    }
   };
+  $("toSignup").onclick = function () { setMode("signup"); };
+  $("toForgot").onclick = function () { setMode("forgot"); };
+  $("toLogin").onclick = function () { setMode("login"); };
   $("logout").onclick = logout;
+
+  // Links from the emails arrive as admin.html#access_token=...&type=recovery (or an error)
+  (function readEmailLink() {
+    if (!location.hash || location.hash.length < 2) return;
+    var h = {}; location.hash.slice(1).split("&").forEach(function (p) { var i = p.indexOf("="); if (i > 0) h[p.slice(0, i)] = decodeURIComponent(p.slice(i + 1).replace(/\+/g, " ")); });
+    if (!h.access_token && !h.error_description) return;
+    try { history.replaceState(null, "", location.pathname + location.search); } catch (e) {}
+    if (h.error_description) { setMode("login"); msg(h.error_description + ". Please ask for a new link.", true); return; }
+    saveSession(null);
+    if (h.type === "recovery") { recoveryToken = h.access_token; setMode("reset"); }
+    else { setMode("login"); msg("Your email is confirmed. You can log in now."); }
+  })();
 
   // ------------------------------------------------------------ data
   function loadAll() {
     msg("");
+    var none = function () { return Promise.resolve([]); };
     return Promise.all([
       api("/rest/v1/listings?select=*&order=id.desc"),
       api("/rest/v1/centers?select=*&order=sort"),
-      api("/rest/v1/requests?select=*&order=created_at.desc&limit=500"),
-      api("/rest/v1/center_requests?select=*&order=created_at.desc&limit=500").catch(function () { return []; })
-    ]).then(function (r) { state.rooms = r[0] || []; state.centers = r[1] || []; state.requests = r[2] || []; state.suggestions = r[3] || []; render(); })
+      can("leads_view") ? api("/rest/v1/requests?select=*&order=created_at.desc&limit=500") : none(),
+      can("centers_edit") ? api("/rest/v1/center_requests?select=*&order=created_at.desc&limit=500").catch(none) : none(),
+      can("staff_manage") ? api("/rest/v1/staff?select=*&order=created_at") : none()
+    ]).then(function (r) { state.rooms = r[0] || []; state.centers = r[1] || []; state.requests = r[2] || []; state.suggestions = r[3] || []; state.staff = r[4] || []; render(); })
       .catch(function (e) { msg("Could not load data: " + e.message, true); });
   }
 
@@ -94,21 +180,36 @@
   }
   function render() {
     document.querySelectorAll(".tab").forEach(function (b) { b.classList.toggle("on", b.dataset.tab === state.tab); });
-    $("addBtn").textContent = state.tab === "centers" ? "+ Add center" : "+ Add room";
-    $("addBtn").hidden = state.tab === "requests" || state.tab === "suggest";
-    if (state.tab === "rooms") renderRooms(); else if (state.tab === "requests") renderRequests(); else if (state.tab === "suggest") renderSuggestions(); else renderCenters();
+    $("addBtn").textContent = state.tab === "centers" ? "+ Add center" : state.tab === "staff" ? "+ Add staff member" : "+ Add room";
+    $("addBtn").hidden = state.tab === "requests" || state.tab === "suggest" ||
+      (state.tab === "rooms" && !can("rooms_edit")) || (state.tab === "centers" && !can("centers_edit"));
+    if (state.tab === "rooms") renderRooms(); else if (state.tab === "requests") renderRequests(); else if (state.tab === "suggest") renderSuggestions(); else if (state.tab === "staff") renderStaff(); else renderCenters();
+  }
+  function renderStaff() {
+    var intro = '<p class="meta2" style="margin:0 0 12px">Add a person by email and choose their role. They then open this page, click <b>Create your account</b>, and confirm their email. Nothing is shown to them until you add their email here. Switch someone off at any time.</p>';
+    $("list").innerHTML = intro + state.staff.map(function (s) {
+      var on = SWITCHES.filter(function (x) { return s.role === "owner" || s[x[0]]; }).map(function (x) { return '<span class="chip">' + esc(x[1].replace(/ \(.*\)$/, "")) + "</span>"; }).join("") || '<span class="meta2">Can look only</span>';
+      var me = access && s.email === access.email;
+      return '<div class="item" data-id="' + esc(s.email) + '"><div class="main"><h3>' + esc(s.name || s.email) + (me ? ' <span class="chip">You</span>' : "") + '</h3><div class="meta2">' + esc(s.email) + " · " + esc(ROLES[s.role] ? ROLES[s.role].label : s.role) + '</div>' +
+        '<div style="margin-top:6px"><span class="chip ' + (s.active ? "ok" : "off") + '">' + (s.active ? "Active" : "Switched off") + "</span>" + on + "</div>" +
+        '<div class="acts"><button class="btn sm" data-act="edits" type="button">Edit access</button>' +
+        '<button class="btn sec sm" data-act="actives" type="button">' + (s.active ? "Switch off" : "Switch on") + "</button>" +
+        '<button class="btn danger sm" data-act="dels" type="button">Remove</button></div></div></div>';
+    }).join("");
   }
   function renderRooms() {
     if (!state.rooms.length) { $("list").innerHTML = '<p class="meta2">No rooms yet. Click "Add room" to create the first one.</p>'; return; }
     $("list").innerHTML = state.rooms.map(function (l) {
       var asked = state.requests.filter(function (r) { return r.listing_id === l.id; }).length;
-      return '<div class="item" data-id="' + l.id + '"><div class="thumb" style="' + thumbStyle(l) + '">' + ((l.photos && l.photos.length) ? "" : "🏠") + "</div>" +
-        '<div class="main"><h3>' + esc(l.title_en) + '</h3><div class="meta2">RM ' + esc(l.price) + " per month · " + esc(l.area) + " · " + esc(l.type) + " · min. " + esc(l.min_stay) + " mo · " + asked + " request" + (asked === 1 ? "" : "s") + "</div>" +
-        "<div style=\"margin-top:6px\">" + chips(l) + "</div>" +
-        '<div class="acts"><select data-act="status" aria-label="Status"><option value="available"' + (l.status === "available" ? " selected" : "") + '>Available</option><option value="reserved"' + (l.status === "reserved" ? " selected" : "") + '>Reserved</option><option value="taken"' + (l.status === "taken" ? " selected" : "") + '>Rented</option></select>' +
+      var edit = can("rooms_edit"), acts = "";
+      if (edit) acts += '<select data-act="status" aria-label="Status"><option value="available"' + (l.status === "available" ? " selected" : "") + '>Available</option><option value="reserved"' + (l.status === "reserved" ? " selected" : "") + '>Reserved</option><option value="taken"' + (l.status === "taken" ? " selected" : "") + '>Rented</option></select>' +
         '<button class="btn sec sm" data-act="toggle" type="button">' + (l.published ? "Hide" : "Show") + '</button>' +
-        '<button class="btn sm" data-act="edit" type="button">Edit</button>' +
-        '<button class="btn danger sm" data-act="del" type="button">Delete</button></div></div></div>';
+        '<button class="btn sm" data-act="edit" type="button">Edit</button>';
+      if (can("rooms_delete")) acts += '<button class="btn danger sm" data-act="del" type="button">Delete</button>';
+      return '<div class="item" data-id="' + l.id + '"><div class="thumb" style="' + thumbStyle(l) + '">' + ((l.photos && l.photos.length) ? "" : "🏠") + "</div>" +
+        '<div class="main"><h3>' + esc(l.title_en) + '</h3><div class="meta2">RM ' + esc(l.price) + " per month · " + esc(l.area) + " · " + esc(l.type) + " · min. " + esc(l.min_stay) + " mo" + (can("leads_view") ? " · " + asked + " request" + (asked === 1 ? "" : "s") : "") + " · " + esc(l.status) + "</div>" +
+        "<div style=\"margin-top:6px\">" + chips(l) + "</div>" +
+        (acts ? '<div class="acts">' + acts + "</div>" : "") + "</div></div>";
     }).join("");
   }
   function centerName(id) { var c = state.centers.filter(function (x) { return x.id === id; })[0]; return c ? c.name_en : (id || "–"); }
@@ -125,7 +226,7 @@
         var room = state.rooms.filter(function (x) { return x.id === r.listing_id; })[0];
         return '<div class="item" data-id="' + r.id + '"><div class="main"><h3>' + esc(room ? room.title_en : "Deleted room") + '</h3><div class="meta2">' +
           esc(new Date(r.created_at).toLocaleString()) + " · language center: " + esc(centerName(r.center)) + " · " + (r.kind === "reserve" ? "<b>RESERVATION</b> · " : "") + (r.kind === "tour" ? "<b>VIDEO TOUR</b> · " : "") + esc(r.name) + " (" + esc(r.whatsapp) + ')</div></div>' +
-          '<button class="btn danger sm" data-act="delreq" type="button">Delete</button></div>';
+          (can("leads_edit") ? '<button class="btn danger sm" data-act="delreq" type="button">Delete</button>' : "") + "</div>";
       }).join("");
   }
   function slug(s) { return String(s).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40) || "center"; }
@@ -146,7 +247,7 @@
   function renderCenters() {
     $("list").innerHTML = state.centers.map(function (c) {
       return '<div class="item" data-id="' + esc(c.id) + '">' + (c.logo_url ? '<img class="clogo" src="' + esc(c.logo_url) + '" alt="">' : "") + '<div class="main"><h3>' + esc(c.name_en) + '</h3><div class="meta2">' + esc(c.name_ar) + " · " + (c.grp === "center" ? "Language center" : "Area") + " · " + esc(c.lat) + ", " + esc(c.lng) + '</div></div>' +
-        '<div class="acts" style="margin:0"><button class="btn sm" data-act="editc" type="button">Edit</button><button class="btn danger sm" data-act="delc" type="button">Delete</button></div></div>';
+        (can("centers_edit") ? '<div class="acts" style="margin:0"><button class="btn sm" data-act="editc" type="button">Edit</button><button class="btn danger sm" data-act="delc" type="button">Delete</button></div>' : "") + "</div>";
     }).join("");
   }
 
@@ -154,7 +255,10 @@
   $("list").onclick = function (e) {
     var b = e.target.closest("[data-act]"); if (!b || b.tagName === "SELECT") return;
     var item = b.closest(".item"), id = item.dataset.id, act = b.dataset.act;
-    if (act === "edit") openRoomForm(state.rooms.filter(function (x) { return String(x.id) === id; })[0]);
+    if (act === "edits") openStaffForm(state.staff.filter(function (x) { return x.email === id; })[0]);
+    else if (act === "actives") { var st = state.staff.filter(function (x) { return x.email === id; })[0]; patchStaff(st.email, { active: !st.active }, st.active ? "Switched off. They can no longer use the admin page." : "Switched on."); }
+    else if (act === "dels") { if (confirm("Remove " + id + " from the staff list? They will lose all access.")) api("/rest/v1/staff?email=eq." + encodeURIComponent(id), { method: "DELETE", write: true }).then(function () { msg("Removed."); loadAll(); }).catch(function (er) { msg(er.message, true); }); }
+    else if (act === "edit") openRoomForm(state.rooms.filter(function (x) { return String(x.id) === id; })[0]);
     else if (act === "toggle") { var r = state.rooms.filter(function (x) { return String(x.id) === id; })[0]; patchRoom(r.id, { published: !r.published }, r.published ? "Room hidden from the website." : "Room is now visible."); }
     else if (act === "del") deleteRoom(state.rooms.filter(function (x) { return String(x.id) === id; })[0]);
     else if (act === "delreq") { if (confirm("Delete this request?")) api("/rest/v1/requests?id=eq." + encodeURIComponent(id), { method: "DELETE", write: true }).then(function () { msg("Request deleted."); loadAll(); }).catch(function (er) { msg(er.message, true); }); }
@@ -187,7 +291,45 @@
   }
 
   document.querySelectorAll(".tab").forEach(function (b) { b.onclick = function () { state.tab = b.dataset.tab; render(); }; });
-  $("addBtn").onclick = function () { if (state.tab === "centers") openCenterForm(null); else openRoomForm(null); };
+  $("addBtn").onclick = function () { if (state.tab === "centers") openCenterForm(null); else if (state.tab === "staff") openStaffForm(null); else openRoomForm(null); };
+  function patchStaff(email, body, ok) {
+    return api("/rest/v1/staff?email=eq." + encodeURIComponent(email), { method: "PATCH", body: body, write: true }).then(function () { msg(ok); return loadAll(); }).catch(function (er) { msg(er.message, true); loadAll(); });
+  }
+  function openStaffForm(s) {
+    var isNew = !s; s = s || Object.assign({ email: "", name: "", role: "viewer", active: true }, PRESETS.viewer);
+    var roleOpts = Object.keys(ROLES).map(function (k) { return [k, ROLES[k].label]; });
+    $("dform").innerHTML = '<form id="sf"><h2>' + (isNew ? "Add a staff member" : "Edit access") + "</h2>" +
+      '<div class="fld"><label for="s-em">Email</label><input id="s-em" name="email" type="email" required maxlength="120" value="' + esc(s.email) + '"' + (isNew ? "" : " readonly") + ' placeholder="name@example.com"><p class="help">They must use this exact email when they create their account.</p></div>' +
+      '<div class="fld"><label for="s-nm">Name</label><input id="s-nm" name="name" maxlength="80" value="' + esc(s.name) + '"></div>' +
+      '<div class="fld"><span>Role</span>' + sel("role", roleOpts, s.role) + '<p class="help" id="roleNote"></p></div>' +
+      '<fieldset><legend>What this person can do</legend>' + SWITCHES.map(function (x) { return chk(x[0], x[1], s[x[0]]); }).join("") +
+      '<p class="help" id="swNote" style="margin-bottom:10px"></p></fieldset>' +
+      '<div class="foot2"><button type="button" class="btn sec" id="cancelBtn">Cancel</button><button type="submit" class="btn" id="saveBtn">Save</button></div></form>';
+    dlg.showModal();
+    var f = $("sf");
+    function note() {
+      var r = f.role.value, owner = r === "owner";
+      $("roleNote").textContent = ROLES[r].note;
+      $("swNote").textContent = owner ? "Owners can always do everything, so these switches do not apply." : "Changing the role sets the switches to that role's usual choice. You can then adjust each one.";
+      SWITCHES.forEach(function (x) { f[x[0]].disabled = owner; });
+    }
+    f.role.onchange = function () { var p = PRESETS[f.role.value]; SWITCHES.forEach(function (x) { f[x[0]].checked = !!p[x[0]]; }); note(); };
+    SWITCHES.forEach(function (x) { f[x[0]].onchange = function () { if (x[0] === "leads_edit" && f.leads_edit.checked) f.leads_view.checked = true; if (x[0] === "leads_view" && !f.leads_view.checked) f.leads_edit.checked = false; }; });
+    note();
+    $("cancelBtn").onclick = closeDlg;
+    f.onsubmit = function (e) {
+      e.preventDefault();
+      var owner = f.role.value === "owner", p = PRESETS[f.role.value];
+      var body = { name: f.name.value.trim(), role: f.role.value };
+      SWITCHES.forEach(function (x) { body[x[0]] = owner ? !!p[x[0]] : f[x[0]].checked; });
+      if (isNew) { body.email = f.email.value.trim().toLowerCase(); body.active = true; }
+      if (isNew && state.staff.some(function (x) { return x.email === body.email; })) { msg("That email is already on the list.", true); return; }
+      $("saveBtn").disabled = true;
+      var req = isNew ? api("/rest/v1/staff", { method: "POST", body: body, write: true }) : api("/rest/v1/staff?email=eq." + encodeURIComponent(s.email), { method: "PATCH", body: body, write: true });
+      req.then(function () { closeDlg(); msg(isNew ? "Added. Ask them to open this page and choose Create your account." : "Saved."); return loadAll(); })
+        .catch(function (er) { msg(er.message, true); $("saveBtn").disabled = false; });
+    };
+  }
 
   // ------------------------------------------------------------ forms
   var dlg = $("dlg");
@@ -432,6 +574,6 @@
   // ------------------------------------------------------------ start
   if (!SB || !SB.url) { msg("Supabase is not configured (config.js).", true); }
   else if (session) {
-    api("/rest/v1/rpc/is_admin", { method: "POST", body: {} }).then(function (ok) { if (ok === true) showPanel(); else saveSession(null); }).catch(function () { saveSession(null); });
+    checkAccess().then(showPanel).catch(function () { saveSession(null); });
   }
 })();

@@ -17,6 +17,9 @@
   .fld input,.fld select,.fld textarea{width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;font:inherit;background:#fff;color:var(--ink)}
   .fld textarea{min-height:84px;resize:vertical}
   .help{font-size:12.5px;color:var(--muted);margin:0}
+  .loginlinks{display:grid;gap:6px;margin-top:14px;justify-items:start}
+  .linkbtn{background:none;border:0;padding:4px 0;font:inherit;font-size:14px;color:var(--brand);text-decoration:underline;cursor:pointer}
+  .linkbtn[hidden],.tab[hidden]{display:none}
   .row2{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
   .btn.sec{background:#fff;color:var(--brand);border:1px solid var(--brand)}
   .btn.sec:hover{background:var(--brand-soft)}
@@ -66,13 +69,18 @@
   <div id="msg" class="msg" role="status" aria-live="polite"></div>
 
   <section id="loginBox" class="login">
-    <h1>Admin login</h1>
-    <p>Only the site owner can sign in here.</p>
+    <h1 id="loginH">Staff sign-in</h1>
+    <p id="loginP">Sign in with your own account.</p>
     <form id="loginForm">
-      <div class="fld"><label for="email">Email</label><input id="email" type="email" required autocomplete="username"></div>
-      <div class="fld"><label for="pw">Password</label><input id="pw" type="password" required autocomplete="current-password"></div>
-      <button class="btn" type="submit" style="width:100%">Log in</button>
+      <div class="fld" id="emailRow"><label for="email">Email</label><input id="email" type="email" required autocomplete="username"></div>
+      <div class="fld" id="pwRow"><label for="pw" id="pwLabel">Password</label><input id="pw" type="password" required autocomplete="current-password"></div>
+      <button class="btn" id="loginBtn" type="submit" style="width:100%">Log in</button>
     </form>
+    <div class="loginlinks">
+      <button type="button" class="linkbtn" id="toSignup">First time? Create your account</button>
+      <button type="button" class="linkbtn" id="toForgot">Forgot password?</button>
+      <button type="button" class="linkbtn" id="toLogin" hidden>Back to sign-in</button>
+    </div>
   </section>
 
   <section id="panel" hidden>
@@ -81,6 +89,7 @@
       <button class="tab" data-tab="requests" type="button">Requests</button>
       <button class="tab" data-tab="centers" type="button">Language centers</button>
       <button class="tab" data-tab="suggest" type="button">Center suggestions</button>
+      <button class="tab" data-tab="staff" type="button">Staff</button>
       <button id="addBtn" class="btn sm grow" type="button">+ Add room</button>
     </div>
     <div id="list"></div>

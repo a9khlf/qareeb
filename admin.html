@@ -18,6 +18,15 @@
   .fld textarea{min-height:84px;resize:vertical}
   .help{font-size:12.5px;color:var(--muted);margin:0}
   .loginlinks{display:grid;gap:6px;margin-top:14px;justify-items:start}
+  .fbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 10px}
+  .fchip{border:1px solid var(--line);background:#fff;padding:6px 14px;border-radius:999px;font:inherit;font-size:14px;cursor:pointer;color:var(--ink)}
+  .fchip b{margin-inline-start:4px;color:var(--muted)}
+  .fchip.on{background:var(--brand);border-color:var(--brand);color:#fff} .fchip.on b{color:#fff}
+  .chip.st-new{background:#fbe7d7;color:#8f3f12} .chip.st-contacted{background:#e3f0f2;color:var(--brand-d)} .chip.st-viewing{background:#efe8d3;color:#6b5314}
+  .chip.st-reserved{background:#e6e1f3;color:#47337a} .chip.st-rented{background:#dff1e8;color:var(--ok)} .chip.st-lost{background:#ececec;color:#555}
+  .item.lead a{color:var(--brand)}
+  .notes{margin-top:10px;border-top:1px dashed var(--line);padding-top:8px}
+  .note{padding:6px 0;border-bottom:1px solid #f0ece2} .note.sys{color:var(--muted);font-size:13.5px}
   .linkbtn{background:none;border:0;padding:4px 0;font:inherit;font-size:14px;color:var(--brand);text-decoration:underline;cursor:pointer}
   .linkbtn[hidden],.tab[hidden]{display:none}
   .row2{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
@@ -70,7 +79,7 @@
 
   <section id="loginBox" class="login">
     <h1 id="loginH">Staff sign-in</h1>
-    <p id="loginP">Sign in with your own account.</p>
+    <p id="loginP">Use the email and password the owner gave you.</p>
     <form id="loginForm">
       <div class="fld" id="emailRow"><label for="email">Email</label><input id="email" type="email" required autocomplete="username"></div>
       <div class="fld" id="pwRow"><label for="pw" id="pwLabel">Password</label><input id="pw" type="password" required autocomplete="current-password"></div>
@@ -86,7 +95,7 @@
   <section id="panel" hidden>
     <div class="tabs">
       <button class="tab on" data-tab="rooms" type="button">Rooms</button>
-      <button class="tab" data-tab="requests" type="button">Requests</button>
+      <button class="tab" data-tab="requests" type="button">Leads</button>
       <button class="tab" data-tab="centers" type="button">Language centers</button>
       <button class="tab" data-tab="suggest" type="button">Center suggestions</button>
       <button class="tab" data-tab="staff" type="button">Staff</button>

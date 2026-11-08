@@ -2,7 +2,7 @@
   "use strict";
   var SB = window.QAREEB_SUPABASE, KEY = "qareeb-admin-session";
   var $ = function (id) { return document.getElementById(id); };
-  var state = { tab: "rooms", rooms: [], centers: [], requests: [], suggestions: [], staff: [] };
+  var state = { tab: "rooms", rooms: [], centers: [], requests: [], suggestions: [], staff: [], notes: {}, team: [] };
   var session = null, access = null;
   var ROLES = {
     owner:      { label: "Owner",            note: "Everything, including staff and their access." },
@@ -154,8 +154,10 @@
       api("/rest/v1/centers?select=*&order=sort"),
       can("leads_view") ? api("/rest/v1/requests?select=*&order=created_at.desc&limit=500") : none(),
       can("centers_edit") ? api("/rest/v1/center_requests?select=*&order=created_at.desc&limit=500").catch(none) : none(),
-      can("staff_manage") ? api("/rest/v1/staff?select=*&order=created_at") : none()
-    ]).then(function (r) { state.rooms = r[0] || []; state.centers = r[1] || []; state.requests = r[2] || []; state.suggestions = r[3] || []; state.staff = r[4] || []; render(); })
+      can("staff_manage") ? api("/rest/v1/staff?select=*&order=created_at") : none(),
+      can("leads_view") ? api("/rest/v1/lead_notes?select=*&order=created_at&limit=3000").catch(none) : none(),
+      can("leads_view") ? api("/rest/v1/rpc/staff_directory", { method: "POST", body: {} }).catch(none) : none()
+    ]).then(function (r) { state.rooms = r[0] || []; state.centers = r[1] || []; state.requests = r[2] || []; state.suggestions = r[3] || []; state.staff = r[4] || []; state.team = r[6] || []; groupNotes(r[5] || []); render(); })
       .catch(function (e) { msg("Could not load data: " + e.message, true); });
   }
 
@@ -180,6 +182,8 @@
   }
   function render() {
     document.querySelectorAll(".tab").forEach(function (b) { b.classList.toggle("on", b.dataset.tab === state.tab); });
+    var newN = state.requests.filter(function (r) { return r.status === "new"; }).length, lt = document.querySelector('[data-tab=requests]');
+    if (lt) lt.textContent = "Leads" + (newN ? " (" + newN + " new)" : "");
     $("addBtn").textContent = state.tab === "centers" ? "+ Add center" : state.tab === "staff" ? "+ Add staff member" : "+ Add room";
     $("addBtn").hidden = state.tab === "requests" || state.tab === "suggest" ||
       (state.tab === "rooms" && !can("rooms_edit")) || (state.tab === "centers" && !can("centers_edit"));
@@ -213,21 +217,88 @@
     }).join("");
   }
   function centerName(id) { var c = state.centers.filter(function (x) { return x.id === id; })[0]; return c ? c.name_en : (id || "–"); }
+  // ------------------------------------------------------------ leads (student requests as a pipeline)
+  var STATUSES = [["new", "New"], ["contacted", "Contacted"], ["viewing", "Viewing"], ["reserved", "Reserved"], ["rented", "Rented"], ["lost", "Lost"]];
+  var lf = { status: "all", mine: false, due: false, q: "" }, openNotes = {};
+  function statusLabel(s) { var x = STATUSES.filter(function (y) { return y[0] === s; })[0]; return x ? x[1] : s; }
+  function todayStr() { var d = new Date(); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }
+  function isDue(r) { return !!r.follow_up && r.follow_up <= todayStr() && r.status !== "rented" && r.status !== "lost"; }
+  function roomOf(r) { return state.rooms.filter(function (x) { return x.id === r.listing_id; })[0]; }
+  function personName(email) {
+    if (!email) return "Nobody";
+    var p = state.team.filter(function (t) { return t.email === email; })[0];
+    return p && p.name ? p.name : email;
+  }
+  function leadMatches(r) {
+    if (lf.status !== "all" && r.status !== lf.status) return false;
+    if (lf.mine && r.assigned_to !== (access && access.email)) return false;
+    if (lf.due && !isDue(r)) return false;
+    if (lf.q) {
+      var room = roomOf(r), hay = (r.name + " " + r.whatsapp + " " + (room ? room.title_en : "")).toLowerCase();
+      if (hay.indexOf(lf.q.toLowerCase()) < 0) return false;
+    }
+    return true;
+  }
+  function phoneHtml(r) {
+    var digits = String(r.whatsapp || "").replace(/\D/g, "");
+    return digits.length >= 8 ? '<a href="https://wa.me/' + digits + '" target="_blank" rel="noopener">' + esc(r.whatsapp) + "</a>" : esc(r.whatsapp);
+  }
+  function leadCard(r) {
+    var room = roomOf(r), edit = can("leads_edit"), notes = state.notes[r.id] || [], open = !!openNotes[r.id];
+    var chipsH = '<span class="chip st-' + esc(r.status) + '">' + esc(statusLabel(r.status)) + "</span>" +
+      (r.kind === "reserve" ? '<span class="chip off">RESERVATION</span>' : "") + (r.kind === "tour" ? '<span class="chip">VIDEO TOUR</span>' : "") +
+      '<span class="chip">' + esc(personName(r.assigned_to)) + "</span>" +
+      (r.follow_up ? '<span class="chip ' + (isDue(r) ? "off" : "") + '">' + (isDue(r) ? "Follow up due " : "Follow up ") + esc(r.follow_up) + "</span>" : "");
+    var acts = "";
+    if (edit) {
+      acts += '<select data-act="lstatus" aria-label="Status">' + STATUSES.map(function (s) { return '<option value="' + s[0] + '"' + (s[0] === r.status ? " selected" : "") + ">" + s[1] + "</option>"; }).join("") + "</select>" +
+        '<select data-act="lassign" aria-label="Assigned to"><option value="">Nobody</option>' + state.team.map(function (t) { return '<option value="' + esc(t.email) + '"' + (t.email === r.assigned_to ? " selected" : "") + ">" + esc(t.name || t.email) + "</option>"; }).join("") + "</select>" +
+        '<label class="meta2" style="display:flex;gap:6px;align-items:center">Follow up <input type="date" data-act="lfollow" value="' + esc(r.follow_up || "") + '" style="padding:5px 8px;border:1px solid var(--line);border-radius:8px"></label>';
+    }
+    acts += '<button class="btn sec sm" data-act="lnotes" type="button">Notes (' + notes.length + ")</button>";
+    if (edit) acts += '<button class="btn danger sm" data-act="delreq" type="button">Delete</button>';
+    var notesH = "";
+    if (open) {
+      notesH = '<div class="notes">' + (notes.map(function (n) {
+        return '<div class="note' + (n.system ? " sys" : "") + '"><div class="meta2">' + esc(new Date(n.created_at).toLocaleString([], { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })) + " · " + esc(personName(n.author)) + "</div><div>" + esc(n.body) + "</div></div>";
+      }).join("") || '<p class="help">No notes yet.</p>') +
+        (edit ? '<div class="fld" style="margin:10px 0 0"><textarea data-note placeholder="Write a note, for example: called, will visit Saturday" maxlength="1000"></textarea></div><button class="btn sm" data-act="lnote" type="button" style="margin-top:8px">Add note</button>' : "") + "</div>";
+    }
+    return '<div class="item lead" data-id="' + r.id + '"><div class="main"><h3>' + esc(room ? room.title_en : "Deleted room") + '</h3><div class="meta2">' +
+      esc(new Date(r.created_at).toLocaleString([], { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })) + " · " + esc(r.name) + " · " + phoneHtml(r) + " · language center: " + esc(centerName(r.center)) + (r.note ? " · “" + esc(r.note) + "”" : "") + "</div>" +
+      '<div style="margin-top:6px">' + chipsH + '</div><div class="acts">' + acts + "</div>" + notesH + "</div></div>";
+  }
+  function renderLeadCards() {
+    var rows = state.requests.filter(leadMatches);
+    $("leadCards").innerHTML = rows.length ? rows.map(leadCard).join("") : '<p class="meta2">No leads match these filters.</p>';
+  }
   function renderRequests() {
-    if (!state.requests.length) { $("list").innerHTML = '<p class="meta2">No requests yet. A row appears each time a student taps "I want this room".</p>'; return; }
-    var counts = {};
-    state.requests.forEach(function (r) { counts[r.listing_id] = (counts[r.listing_id] || 0) + 1; });
-    var top = Object.keys(counts).sort(function (a, b) { return counts[b] - counts[a]; }).slice(0, 5).map(function (id) {
+    if (!state.requests.length) { $("list").innerHTML = '<p class="meta2">No leads yet. One appears each time a student asks about a room, requests a video tour or reserves.</p>'; return; }
+    var counts = {}, byRoom = {};
+    state.requests.forEach(function (r) { counts[r.status] = (counts[r.status] || 0) + 1; byRoom[r.listing_id] = (byRoom[r.listing_id] || 0) + 1; });
+    var dueN = state.requests.filter(isDue).length, mineN = state.requests.filter(function (r) { return r.assigned_to === (access && access.email); }).length;
+    var chipB = function (act, v, label, n, on) { return '<button type="button" class="fchip' + (on ? " on" : "") + '" data-act="' + act + '" data-v="' + v + '">' + label + (n != null ? " <b>" + n + "</b>" : "") + "</button>"; };
+    var bar = '<div class="fbar">' + chipB("lfilter", "all", "All", state.requests.length, lf.status === "all") +
+      STATUSES.map(function (s) { return chipB("lfilter", s[0], s[1], counts[s[0]] || 0, lf.status === s[0]); }).join("") + "</div>" +
+      '<div class="fbar">' + chipB("lmine", "", "Assigned to me", mineN, lf.mine) + chipB("ldue", "", "Follow-ups due", dueN, lf.due) +
+      '<input type="search" id="leadSearch" placeholder="Search name, number or room" value="' + esc(lf.q) + '" style="flex:1;min-width:180px;padding:7px 10px;border:1px solid var(--line);border-radius:999px;font:inherit"></div>';
+    var top = Object.keys(byRoom).sort(function (a, b) { return byRoom[b] - byRoom[a]; }).slice(0, 5).map(function (id) {
       var room = state.rooms.filter(function (x) { return String(x.id) === id; })[0];
-      return '<div class="count-row"><span>' + esc(room ? room.title_en : "Deleted room") + "</span><b>" + counts[id] + "</b></div>";
+      return '<div class="count-row"><span>' + esc(room ? room.title_en : "Deleted room") + "</span><b>" + byRoom[id] + "</b></div>";
     }).join("");
-    $("list").innerHTML = '<div class="item" style="display:block"><h3>Most requested rooms</h3>' + top + "</div>" +
-      state.requests.map(function (r) {
-        var room = state.rooms.filter(function (x) { return x.id === r.listing_id; })[0];
-        return '<div class="item" data-id="' + r.id + '"><div class="main"><h3>' + esc(room ? room.title_en : "Deleted room") + '</h3><div class="meta2">' +
-          esc(new Date(r.created_at).toLocaleString()) + " · language center: " + esc(centerName(r.center)) + " · " + (r.kind === "reserve" ? "<b>RESERVATION</b> · " : "") + (r.kind === "tour" ? "<b>VIDEO TOUR</b> · " : "") + esc(r.name) + " (" + esc(r.whatsapp) + ')</div></div>' +
-          (can("leads_edit") ? '<button class="btn danger sm" data-act="delreq" type="button">Delete</button>' : "") + "</div>";
-      }).join("");
+    $("list").innerHTML = bar + '<div id="leadCards"></div><div class="item" style="display:block;margin-top:14px"><h3>Most requested rooms</h3>' + top + "</div>";
+    renderLeadCards();
+  }
+  function loadLeads() {
+    return Promise.all([
+      api("/rest/v1/requests?select=*&order=created_at.desc&limit=500"),
+      api("/rest/v1/lead_notes?select=*&order=created_at&limit=3000").catch(function () { return []; })
+    ]).then(function (r) { state.requests = r[0] || []; groupNotes(r[1] || []); render(); });
+  }
+  function groupNotes(rows) { state.notes = {}; rows.forEach(function (n) { (state.notes[n.request_id] = state.notes[n.request_id] || []).push(n); }); }
+  function patchLead(id, body, ok) {
+    return api("/rest/v1/requests?id=eq." + encodeURIComponent(id), { method: "PATCH", body: body, write: true })
+      .then(function () { msg(ok); return loadLeads(); }).catch(function (er) { msg(er.message, true); loadLeads(); });
   }
   function slug(s) { return String(s).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40) || "center"; }
   function renderSuggestions() {
@@ -254,8 +325,19 @@
   // ------------------------------------------------------------ list actions
   $("list").onclick = function (e) {
     var b = e.target.closest("[data-act]"); if (!b || b.tagName === "SELECT") return;
-    var item = b.closest(".item"), id = item.dataset.id, act = b.dataset.act;
-    if (act === "edits") openStaffForm(state.staff.filter(function (x) { return x.email === id; })[0]);
+    var item = b.closest(".item"), id = item ? item.dataset.id : "", act = b.dataset.act;
+    if (act === "lfilter") { lf.status = b.dataset.v; render(); }
+    else if (act === "lmine") { lf.mine = !lf.mine; render(); }
+    else if (act === "ldue") { lf.due = !lf.due; render(); }
+    else if (act === "lnotes") { openNotes[id] = !openNotes[id]; renderLeadCards(); }
+    else if (act === "lnote") {
+      var ta = item.querySelector("textarea[data-note]"), text = ta ? ta.value.trim() : "";
+      if (!text) { msg("Write something first.", true); return; }
+      b.disabled = true;
+      api("/rest/v1/lead_notes", { method: "POST", body: { request_id: +id, author: access.email, body: text }, write: true })
+        .then(function () { msg("Note added."); return loadLeads(); }).catch(function (er) { msg(er.message, true); b.disabled = false; });
+    }
+    else if (act === "edits") openStaffForm(state.staff.filter(function (x) { return x.email === id; })[0]);
     else if (act === "actives") { var st = state.staff.filter(function (x) { return x.email === id; })[0]; patchStaff(st.email, { active: !st.active }, st.active ? "Switched off. They can no longer use the admin page." : "Switched on."); }
     else if (act === "dels") { if (confirm("Remove " + id + "? Their login is deleted and they lose all access.")) api("/rest/v1/staff?email=eq." + encodeURIComponent(id), { method: "DELETE", write: true }).then(function () { return staffFn("remove", id).catch(function () { msg("Access removed, but the login itself could not be deleted. It has no access.", true); }); }).then(function () { if (!$("msg").classList.contains("err")) msg("Removed."); loadAll(); }).catch(function (er) { msg(er.message, true); }); }
     else if (act === "edit") openRoomForm(state.rooms.filter(function (x) { return String(x.id) === id; })[0]);
@@ -270,8 +352,15 @@
     else if (act === "editc") openCenterForm(state.centers.filter(function (x) { return x.id === id; })[0]);
     else if (act === "delc") { var c = state.centers.filter(function (x) { return x.id === id; })[0]; if (confirm('Delete "' + c.name_en + '"? Students will no longer be able to pick it.')) api("/rest/v1/centers?id=eq." + encodeURIComponent(id), { method: "DELETE", write: true }).then(function () { msg("Deleted."); loadAll(); }).catch(function (er) { msg(er.message, true); }); }
   };
+  $("list").oninput = function (e) {
+    if (e.target.id === "leadSearch") { lf.q = e.target.value; renderLeadCards(); }
+  };
   $("list").onchange = function (e) {
-    if (e.target.dataset.act === "status") { var id = e.target.closest(".item").dataset.id; patchRoom(+id, e.target.value === "reserved" ? { status: "reserved" } : { status: e.target.value, reserved_until: null }, "Status updated."); }
+    var act = e.target.dataset.act, lid = e.target.closest(".item") ? e.target.closest(".item").dataset.id : "";
+    if (act === "lstatus") patchLead(lid, { status: e.target.value }, "Status updated.");
+    else if (act === "lassign") patchLead(lid, { assigned_to: e.target.value || null }, "Assigned.");
+    else if (act === "lfollow") patchLead(lid, { follow_up: e.target.value || null }, e.target.value ? "Follow-up date saved." : "Follow-up date cleared.");
+    else if (e.target.dataset.act === "status") { var id = e.target.closest(".item").dataset.id; patchRoom(+id, e.target.value === "reserved" ? { status: "reserved" } : { status: e.target.value, reserved_until: null }, "Status updated."); }
   };
   function patchRoom(id, body, ok) {
     return api("/rest/v1/listings?id=eq." + id, { method: "PATCH", body: body, write: true }).then(function () { msg(ok); return loadAll(); }).catch(function (er) { msg(er.message, true); loadAll(); });

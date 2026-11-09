@@ -77,6 +77,38 @@
   body.inapp .top,body.inapp #loginMain{display:none}
   .msg{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:90;width:max-content;max-width:min(640px,92vw);margin:0;box-shadow:0 10px 30px rgba(0,0,0,.2)}
   .app{display:grid;grid-template-columns:272px minmax(0,1fr);min-height:100vh}
+  .app[hidden],.gate[hidden],[hidden]{display:none!important}
+  /* sign-in page: art panel + form */
+  .gate{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);min-height:100vh}
+  body.inapp .gate{display:none}
+  .gate-art{position:relative;overflow:hidden;display:flex;flex-direction:column;gap:26px;color:#fff;padding:48px clamp(24px,5vw,76px) 210px;background-image:var(--star),radial-gradient(900px 420px at 90% -10%,rgba(224,194,125,.22),transparent 62%),linear-gradient(160deg,#041f27 0%,#073743 52%,#0b4a5a 100%);background-size:64px 64px,auto,auto}
+  .gate-logo{align-self:flex-start;background:#fff;border-radius:14px;padding:10px 18px;box-shadow:0 8px 24px rgba(0,0,0,.25)}
+  .gate-logo img{display:block;height:34px;width:auto}
+  .gate-art h2{margin:10px 0 0;max-width:520px;font-family:Georgia,"Times New Roman",serif;font-weight:600;font-size:clamp(30px,3.6vw,46px);line-height:1.12;letter-spacing:-.01em}
+  .gate-art .lead{margin:0;max-width:470px;color:#d3e4e8;font-size:17px;line-height:1.65}
+  .gate-feats{list-style:none;margin:6px 0 0;padding:0;display:grid;gap:18px;max-width:470px}
+  .gate-feats li{display:flex;gap:14px;align-items:flex-start}
+  .gate-feats .ic{flex:0 0 42px;height:42px;border-radius:13px;display:grid;place-items:center;background:rgba(224,194,125,.12);border:1px solid rgba(224,194,125,.38)}
+  .gate-feats b{display:block;font-size:16px;margin-bottom:2px}
+  .gate-feats span:not(.ic){color:#b9cdd2;font-size:14.5px;line-height:1.5}
+  .skyline{position:absolute;left:0;right:0;bottom:0;width:100%;height:180px;display:block}
+  .gate-form{display:grid;place-items:center;padding:36px 20px;background:var(--bg)}
+  .gate-form .login{margin:0;width:100%;max-width:430px;padding:34px 32px 26px;border:1px solid #eadfc4;border-radius:22px;box-shadow:0 28px 64px rgba(6,42,52,.10),0 2px 0 rgba(184,146,74,.35) inset}
+  .gate-eyebrow{margin:0 0 6px!important;font-size:12px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--cta)!important}
+  .gate-form .login h1{font-family:Georgia,"Times New Roman",serif;font-size:28px;font-weight:600;color:var(--midnight)}
+  .gate-form .login .btn{background:var(--midnight);padding:14px 22px;font-size:16px;border-radius:12px}
+  .gate-form .login .btn:hover{background:var(--brand)}
+  .gate-form .fld input:focus{outline:2px solid var(--gold);outline-offset:0;border-color:var(--gold)}
+  .gate-note{margin:18px 0 0!important;padding-top:14px;border-top:1px solid var(--line);font-size:13px;color:var(--muted)}
+  .gate-note a{color:var(--brand);font-weight:600}
+  @media(max-width:860px){
+    .gate{grid-template-columns:minmax(0,1fr);min-height:0}
+    .gate-art{padding:26px 22px 128px;gap:16px}
+    .gate-art h2{font-size:30px}.gate-art .lead{font-size:15.5px}
+    .gate-feats{display:none}
+    .skyline{height:120px}
+    .gate-form{margin-top:-44px;position:relative;z-index:2;padding:0 16px 40px}
+  }
   .drawer{position:sticky;top:0;height:100vh;overflow:auto;background:var(--midnight) var(--star);background-size:64px 64px;color:#cfe3e7;display:flex;flex-direction:column;padding:18px 14px 14px}
   .drawerclose{display:none;position:absolute;top:10px;inset-inline-end:10px;border:0;background:rgba(255,255,255,.1);color:#fff;width:34px;height:34px;border-radius:10px;font-size:16px;cursor:pointer}
   .usercard{display:flex;gap:12px;align-items:center;padding:6px 8px 16px;border-bottom:1px solid rgba(255,255,255,.12)}
@@ -168,16 +200,46 @@
 </style>
 </head>
 <body>
-<header class="top">
-  <div class="wrap bar">
-    <span class="logo"><img class="logo-full" src="logo-header.png" alt="Qareeb" width="394" height="132"><span class="adm">Staff</span></span>
-  </div>
-</header>
-
 <div id="msg" class="msg" role="status" aria-live="polite"></div>
 
-<main class="wrap" id="loginMain">
+<main class="gate" id="loginMain">
+  <aside class="gate-art" aria-hidden="false">
+    <div class="gate-logo"><img src="logo-header.png" alt="Qareeb" width="394" height="132"></div>
+    <h2>Student housing,<br>run with care.</h2>
+    <p class="lead">The private workspace for the Qareeb team: rooms, owners, leads and share links, all in one place.</p>
+    <ul class="gate-feats">
+      <li><span class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#e0c27d" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21V8l9-5 9 5v13"/><path d="M9 21v-6h6v6"/><path d="M8 11h.01M12 11h.01M16 11h.01"/></svg></span><div><b>Rooms and owners</b><span>Every room linked to a known owner before students see it.</span></div></li>
+      <li><span class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#e0c27d" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg></span><div><b>Leads and your team</b><span>Follow every student enquiry from first message to move-in.</span></div></li>
+      <li><span class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#e0c27d" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg></span><div><b>Share links with counts</b><span>A personal link for each agent, with visits and credit tracked.</span></div></li>
+    </ul>
+    <svg class="skyline" viewBox="0 0 640 170" preserveAspectRatio="xMidYMax slice" aria-hidden="true" focusable="false">
+      <circle cx="540" cy="48" r="20" fill="#e0c27d" opacity=".16"/>
+      <g fill="#0b4a5a" opacity=".55">
+        <rect x="10" y="108" width="34" height="62"/><rect x="48" y="90" width="28" height="80"/><rect x="80" y="118" width="40" height="52"/><rect x="124" y="98" width="30" height="72"/>
+        <rect x="160" y="124" width="46" height="46"/><rect x="214" y="104" width="32" height="66"/><rect x="396" y="110" width="30" height="60"/><rect x="430" y="126" width="44" height="44"/>
+        <rect x="512" y="96" width="30" height="74"/><rect x="546" y="116" width="40" height="54"/><rect x="590" y="100" width="40" height="70"/>
+      </g>
+      <g fill="#0e6f82" opacity=".6">
+        <rect x="250" y="116" width="34" height="54"/><rect x="368" y="104" width="20" height="66"/><rect x="480" y="120" width="28" height="50"/>
+      </g>
+      <g fill="#083744">
+        <path d="M296 170V48l6-14h14l6 14v122z"/><path d="M334 170V48l6-14h14l6 14v122z"/>
+        <rect x="324" y="82" width="12" height="6"/>
+        <rect x="302" y="14" width="2" height="20"/><rect x="346" y="14" width="2" height="20"/>
+        <rect x="448" y="70" width="5" height="100"/><ellipse cx="450.5" cy="68" rx="11" ry="7"/><rect x="449.8" y="30" width="1.6" height="36"/>
+      </g>
+      <g fill="#e0c27d">
+        <rect x="302" y="10" width="2" height="6"/><rect x="346" y="10" width="2" height="6"/><rect x="449.8" y="26" width="1.6" height="6"/>
+        <rect x="301" y="62" width="3" height="3" opacity=".8"/><rect x="309" y="78" width="3" height="3" opacity=".8"/><rect x="301" y="96" width="3" height="3" opacity=".8"/><rect x="309" y="112" width="3" height="3" opacity=".8"/><rect x="301" y="130" width="3" height="3" opacity=".8"/>
+        <rect x="344" y="66" width="3" height="3" opacity=".8"/><rect x="352" y="84" width="3" height="3" opacity=".8"/><rect x="344" y="102" width="3" height="3" opacity=".8"/><rect x="352" y="120" width="3" height="3" opacity=".8"/><rect x="344" y="138" width="3" height="3" opacity=".8"/>
+        <rect x="449" y="66" width="3" height="3"/>
+      </g>
+      <rect x="0" y="168" width="640" height="2" fill="#e0c27d" opacity=".5"/>
+    </svg>
+  </aside>
+  <div class="gate-form">
   <section id="loginBox" class="login">
+    <p class="gate-eyebrow">Staff only</p>
     <h1 id="loginH">Staff sign-in</h1>
     <p id="loginP">Use the email and password the owner gave you.</p>
     <form id="loginForm">
@@ -190,7 +252,9 @@
       <button type="button" class="linkbtn" id="toForgot">Forgot password?</button>
       <button type="button" class="linkbtn" id="toLogin" hidden>Back to sign-in</button>
     </div>
+    <p class="gate-note">Private area for the Qareeb team. <a href="/">Back to the student site</a></p>
   </section>
+  </div>
 </main>
 
 <div id="panel" class="app" hidden>

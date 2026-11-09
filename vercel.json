@@ -1,0 +1,10 @@
+{
+  "redirects": [
+    { "source": "/s/:slug/ar", "destination": "/?s=:slug&lang=ar", "statusCode": 302 },
+    { "source": "/s/:slug/en", "destination": "/?s=:slug&lang=en", "statusCode": 302 },
+    { "source": "/s/:slug", "destination": "/?s=:slug", "statusCode": 302 }
+  ],
+  "rewrites": [
+    { "source": "/staff", "destination": "/admin.html" }
+  ]
+}

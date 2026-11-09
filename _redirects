@@ -1,7 +1,0 @@
-# Short address for the staff workspace: qareebkl.netlify.app/staff
-/staff   /admin.html   200
-
-# Named share links made in the staff area (Student page): qareebkl.netlify.app/s/sara  (and /s/sara/ar, /s/sara/en)
-/s/:slug/ar   /?s=:slug&lang=ar   302
-/s/:slug/en   /?s=:slug&lang=en   302
-/s/:slug      /?s=:slug           302

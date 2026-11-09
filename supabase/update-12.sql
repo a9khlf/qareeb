@@ -1,6 +1,6 @@
 -- ============================================================
 -- QAREEB UPDATE 12: named share links with counts (run in Supabase > SQL Editor, after update-11.sql)
--- A manager creates links such as  qareebkl.netlify.app/s/sara  for an agent, a WhatsApp group or a poster.
+-- A manager creates links such as  qareebkl.vercel.app/s/sara  for an agent, a WhatsApp group or a poster.
 -- Each link can credit a staff member and can have its own WhatsApp number.
 -- The Student page (share) shows for every link how many students opened it, looked at rooms and asked.
 -- ============================================================

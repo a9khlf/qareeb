@@ -94,7 +94,7 @@
   // Login box has four modes: sign in, first-time account, forgot password, set a new password (from the emailed link).
   var mode = "login", recoveryToken = null;
   var MODES = {
-    login:  { h: "Staff sign-in",       p: "Use the email and password the owner gave you.",                                    btn: "Log in",             pw: true,  newpw: false },
+    login:  { h: "Staff sign-in",       p: "Use the email and password you were given.",                                   btn: "Log in",             pw: true,  newpw: false },
     signup: { h: "Create your account", p: "Use the email the owner added for you. We will email you a link to confirm it.", btn: "Create account", pw: true,  newpw: true },
     forgot: { h: "Forgot password",     p: "Enter your email and we will send you a link to choose a new password.", btn: "Send the link",    pw: false, newpw: false },
     reset:  { h: "Choose a new password", p: "At least 8 characters.",                                             btn: "Save new password",  pw: true,  newpw: true }

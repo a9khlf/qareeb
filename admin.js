@@ -777,7 +777,7 @@
     else if (act === "dels") { var rm = state.staff.filter(function (x) { return x.email === id; })[0]; if (rm) openRemoveForm(rm); }
     else if (act === "restores") { patchStaff(id, { active: true, left_at: null }, "Welcome back. They can sign in again with their old password, or you can set a new one in Edit access."); }
     else if (act === "edit") openRoomForm(state.rooms.filter(function (x) { return String(x.id) === id; })[0]);
-    else if (act === "toggle") { var r = state.rooms.filter(function (x) { return String(x.id) === id; })[0]; patchRoom(r.id, { published: !r.published }, r.published ? "Room hidden from the website." : "Room is now visible."); }
+    else if (act === "toggle") { var r = state.rooms.filter(function (x) { return String(x.id) === id; })[0]; if (!r.published && !r.owner_id) { msg("Link an owner to this room first (Edit, then Owner). A room is not shown to students until we know who owns it.", true); return; } patchRoom(r.id, { published: !r.published }, r.published ? "Room hidden from the website." : "Room is now visible."); }
     else if (act === "del") deleteRoom(state.rooms.filter(function (x) { return String(x.id) === id; })[0]);
     else if (act === "delreq") { if (confirm("Delete this request?")) api("/rest/v1/requests?id=eq." + encodeURIComponent(id), { method: "DELETE", write: true }).then(function () { msg("Request deleted."); loadAll(); }).catch(function (er) { msg(er.message, true); }); }
     else if (act === "addsug") openCenterForm(null, { id: slug(item.dataset.name), name_en: item.dataset.name, lat: item.dataset.lat, lng: item.dataset.lng });
@@ -974,7 +974,7 @@
   }
 
   function openRoomForm(r) {
-    var isNew = !r; r = r || { type: "room", area: "", price: "", status: "available", beds: 1, min_stay: 1, gender: "mixed", furnished: true, bills: false, title_en: "", title_ar: "", desc_en: "", desc_ar: "", photos: [], video: "", v_video: false, v_owner: false, v_visited: false, mosque_min: "", halal_min: "", arabic: false, published: true, colors: ["#1f6f78", "#5aa9a8"] };
+    var isNew = !r; r = r || { type: "room", area: "", price: "", status: "available", beds: 1, min_stay: 1, gender: "mixed", furnished: true, bills: false, title_en: "", title_ar: "", desc_en: "", desc_ar: "", photos: [], video: "", v_video: false, v_owner: false, v_visited: false, mosque_min: "", halal_min: "", arabic: false, published: false, colors: ["#1f6f78", "#5aa9a8"] };
     photoList = (r.photos || []).slice();
     var areas = Array.from(new Set(state.rooms.map(function (x) { return x.area; }))).map(function (a) { return '<option value="' + esc(a) + '">'; }).join("");
     $("dform").innerHTML = '<form id="rf"><h2>' + (isNew ? "Add a room" : "Edit room") + "</h2>" +
@@ -1085,6 +1085,7 @@
   function saveRoom(old, isNew) {
     var f = $("rf"), d = new FormData(f), co = parseCoords(d.get("coords"));
     if (!co) { msg("Coordinates look wrong. Use the format: 3.1570, 101.7120", true); return; }
+    if (f.published.checked && !num(d.get("owner_id"))) { msg("Choose an owner for this room before making it visible. Every room on Qareeb must have an owner linked (private, staff only).", true); return; }
     if (outsideMalaysia(co) && !confirm("These coordinates are outside Malaysia. Save anyway?")) return;
     var body = {
       type: d.get("type"), area: d.get("area").trim(), price: Number(d.get("price")), status: d.get("status"), beds: Number(d.get("beds")),

@@ -312,3 +312,45 @@ html{scroll-behavior:smooth}
 .top .logo{gap:12px}
 .logo .adm{padding:4px 10px;border:1px solid var(--line);border-radius:999px;font-size:13px;font-weight:700;color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
 @media(max-width:600px){.logo-full{height:38px}}
+
+/* ===== Palette v4: luxury =====
+   deep teal + midnight, ivory pages, real gold (buttons and highlights, dark text on gold),
+   a faint eight-point-star texture on the dark bands, a serif voice for headlines.
+   Text pairs checked at 4.5:1 or better. The bronze text colour replaces copper. */
+:root{
+  --bg:#fbf8f1; --card:#fff; --ink:#14242a; --muted:#566669; --line:#e8dfcc;
+  --brand:#0b4a5a; --brand-d:#073743; --brand-soft:#e3eded;
+  --gold:#b8924a; --gold-hi:#e0c27d; --gold-soft:#f4ead3; --gold-text:#5f4510; --midnight:#062a34;
+  --cta:#85641f; --cta-d:#6a4f16;
+  --star:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'%3E%3Cg fill='none' stroke='%23e0c27d' stroke-opacity='.11'%3E%3Crect x='16' y='16' width='32' height='32'/%3E%3Crect x='16' y='16' width='32' height='32' transform='rotate(45 32 32)'/%3E%3C/g%3E%3C/svg%3E");
+}
+:focus-visible{outline-color:var(--gold)}
+.top{border-bottom:1px solid #eadfc4}
+.hero{background-image:var(--star),radial-gradient(900px 380px at 88% -20%,rgba(224,194,125,.20),transparent 62%),radial-gradient(700px 320px at 0% 115%,rgba(255,255,255,.06),transparent 65%),linear-gradient(160deg,#041f27 0%,#073743 52%,#0b4a5a 100%);background-size:64px 64px,auto,auto,auto;background-repeat:repeat,no-repeat,no-repeat,no-repeat}
+.hero .eyebrow,.footer-note,footer .foot-note{color:var(--gold-hi)}
+.hero .eyebrow::before{background:var(--gold-hi)}
+.hero p.lead{color:#d3e4e8}
+.hero h1,.how h2{font-family:Georgia,"Times New Roman",serif;font-weight:600;letter-spacing:-.01em}
+[dir=rtl] .hero h1,[dir=rtl] .how h2{font-family:inherit;letter-spacing:0}
+.values li{border-inline-start-color:var(--gold)}
+.values b{font-family:Georgia,"Times New Roman",serif;font-weight:600}
+[dir=rtl] .values b{font-family:inherit}
+.card{border-color:var(--line)}
+.card:hover{box-shadow:0 16px 36px rgba(6,42,52,.14),0 0 0 1px rgba(184,146,74,.35);transform:translateY(-3px)}
+.price{color:var(--midnight)}
+.btn.wa{background:linear-gradient(135deg,var(--gold-hi),#c39a45);color:var(--midnight);box-shadow:0 8px 20px rgba(184,146,74,.34)}
+.btn.wa:hover{background:linear-gradient(135deg,#ebcf8e,#b8924a);color:var(--midnight)}
+.btn.wa.off{background:#6b787c;color:#fff;box-shadow:none}
+.btn.alt{color:var(--cta);border-color:#d9c58f}
+.card .btn.alt{border-color:#e2d2ab;color:var(--cta)}
+.card .btn.alt:hover{background:#fbf3df;border-color:var(--gold)}
+.stay,.card .stay,.tag.stay-tag,.stay-tag{background:var(--gold-soft);border-color:#e2d2ab;color:var(--cta)}
+.walk.gold{background:var(--gold-soft);color:var(--gold-text);border:1px solid #e2d2ab}
+.owner{background:linear-gradient(180deg,#fff 0%,#fbf5e6 100%);border-color:#eadfc4}
+.nav a.navcta{background:var(--midnight)}
+.nav a.navcta:hover{background:var(--brand)}
+.vbtn.on{background:var(--midnight);border-color:var(--midnight)}
+.steps .n{background:var(--midnight);color:var(--gold-hi)}
+.steps li{border-color:var(--line)}
+footer{background-image:var(--star);background-color:var(--midnight);background-size:64px 64px}
+footer::before{background:var(--gold)}

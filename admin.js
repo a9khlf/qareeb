@@ -1081,6 +1081,13 @@
       '<div class="fld"><span>Who lives here</span>' + sel("gender", [["mixed", "Mixed"], ["women", "Women only"], ["men", "Men only"], ["family", "Families"]], r.gender) + "</div>" +
       '<div class="fld"><span>Owner (private, staff only)</span>' + sel("owner_id", [["", "No owner linked"]].concat(state.owners.map(function (o) { return [o.id, o.name]; })), r.owner_id == null ? "" : r.owner_id) + "</div></div>" +
       chk("furnished", "Furnished", r.furnished) + chk("bills", "Bills included in the price", r.bills) + "</fieldset>" +
+      ("available_from" in (state.rooms[0] || {}) ? '<fieldset><legend>For students</legend><div class="row2">' +
+        '<div class="fld"><label for="f-af">Available from (empty = now)</label><input id="f-af" name="available_from" type="date" value="' + esc(r.available_from || "") + '"></div>' +
+        '<div class="fld"><label for="f-wf">Wifi speed (Mbps)</label><input id="f-wf" name="wifi_mbps" type="number" min="1" max="10000" value="' + esc(r.wifi_mbps == null ? "" : r.wifi_mbps) + '" placeholder="e.g. 300"></div>' +
+        '<div class="fld"><span>Room sharing</span>' + sel("sharing", [["", "Not stated"], ["private", "Private room (only you)"], ["shared", "Shared room"]], r.sharing || "") + "</div>" +
+        '<div class="fld"><label for="f-hm">Housemates (other people living in the unit)</label><input id="f-hm" name="housemates" type="number" min="0" max="30" value="' + esc(r.housemates == null ? "" : r.housemates) + '"></div></div>' +
+        '<div class="fld"><label for="f-rn">House rules in English (one per line)</label><textarea id="f-rn" name="house_rules_en" maxlength="800" placeholder="No smoking&#10;Quiet after 10 pm">' + esc(r.house_rules_en || "") + "</textarea></div>" +
+        '<div class="fld"><label for="f-ra">House rules in Arabic (one per line)</label><textarea id="f-ra" name="house_rules_ar" dir="rtl" maxlength="800">' + esc(r.house_rules_ar || "") + "</textarea></div></fieldset>" : "") +
       '<fieldset><legend>Text</legend>' +
       '<div class="fld"><label for="f-te">Title (English)</label><input id="f-te" name="title_en" required maxlength="120" value="' + esc(r.title_en) + '"></div>' +
       '<div class="fld"><label for="f-ta">Title (Arabic)</label><input id="f-ta" name="title_ar" dir="rtl" required maxlength="120" value="' + esc(r.title_ar) + '"></div>' +
@@ -1199,6 +1206,14 @@
       var va = d.get("verified_at") || null;
       if (!va && body.v_video && body.v_owner) va = new Date(Date.now() + 8 * 36e5).toISOString().slice(0, 10);   // today in Malaysia
       body.verified_at = body.v_video && body.v_owner ? va : null;
+    }
+    if (d.has("available_from")) {   // only once the database has these columns (supabase/update-18.sql)
+      body.available_from = d.get("available_from") || null;
+      body.wifi_mbps = num(d.get("wifi_mbps"));
+      body.sharing = d.get("sharing") || null;
+      body.housemates = num(d.get("housemates"));
+      body.house_rules_en = (d.get("house_rules_en") || "").trim();
+      body.house_rules_ar = (d.get("house_rules_ar") || "").trim();
     }
     var req = isNew ? api("/rest/v1/listings", { method: "POST", body: body, write: true }) : api("/rest/v1/listings?id=eq." + old.id, { method: "PATCH", body: body, write: true });
     $("saveBtn").disabled = true;

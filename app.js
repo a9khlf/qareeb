@@ -76,7 +76,10 @@
       saveRoom: "Save this room", unsaveRoom: "Remove from saved", savedTab: "Saved",
       saveEmpty: "You have not saved any rooms yet. Tap the heart on a room to keep it here.",
       moreTitle: "More rooms nearby", sameBuilding: "Same building",
-      checkedOn: "Checked by Qareeb on", addedToday: "Added today", addedYesterday: "Added yesterday", addedOn: "Added on"
+      checkedOn: "Checked by Qareeb on", addedToday: "Added today", addedYesterday: "Added yesterday", addedOn: "Added on",
+      fMoveIn: "I arrive on", availNow: "Available now", availFrom: "Available from",
+      highlights: "Highlights", hlTo: "to", hlWifi: "Wifi", hlWifiFast: "Fast wifi",
+      sh_private: "Private room", sh_shared: "Shared room", housemates: "Housemates", rulesTitle: "House rules"
     },
     ar: {
       navRooms: "الغرف", navHow: "كيف يعمل", navContact: "تواصل معنا", menuLabel: "القائمة",
@@ -144,7 +147,10 @@
       saveRoom: "احفظ هذه الغرفة", unsaveRoom: "إزالة من المحفوظات", savedTab: "المحفوظة",
       saveEmpty: "لم تحفظ أي غرفة بعد. اضغط على القلب في أي غرفة لتبقى هنا.",
       moreTitle: "غرف قريبة أخرى", sameBuilding: "نفس المبنى",
-      checkedOn: "تحقق منها فريق قريب بتاريخ", addedToday: "أضيفت اليوم", addedYesterday: "أضيفت أمس", addedOn: "أضيفت بتاريخ"
+      checkedOn: "تحقق منها فريق قريب بتاريخ", addedToday: "أضيفت اليوم", addedYesterday: "أضيفت أمس", addedOn: "أضيفت بتاريخ",
+      fMoveIn: "تاريخ وصولي", availNow: "متاحة الآن", availFrom: "متاحة من",
+      highlights: "أبرز المزايا", hlTo: "إلى", hlWifi: "إنترنت", hlWifiFast: "إنترنت سريع",
+      sh_private: "غرفة خاصة", sh_shared: "غرفة مشتركة", housemates: "عدد الساكنين معك", rulesTitle: "قواعد السكن"
     }
   };
   // The wording staff can change from the staff area lives in sitetext.js (original wording);
@@ -255,6 +261,35 @@
     return lang === "ar" ? "على بعد " + k : k + " away";
   }
 
+  // ---- move-in date, highlights, room facts and house rules ----
+  function todayKL() { return new Date(Date.now() + 8 * 36e5).toISOString().slice(0, 10); }
+  function futureAvail(l) { return !!l.availableFrom && l.availableFrom > todayKL(); }
+  function availText(l) { return futureAvail(l) ? t("availFrom") + " " + fmtDate(l.availableFrom, "UTC") : t("availNow"); }
+  function factTags(l) {
+    var out = '<span class="tag">📅 ' + availText(l) + "</span>";
+    if (l.sharing) out += '<span class="tag">' + t("sh_" + l.sharing) + "</span>";
+    if (l.housemates != null) out += '<span class="tag">' + t("housemates") + ": " + l.housemates + "</span>";
+    if (l.wifi) out += '<span class="tag">📶 ' + l.wifi + " Mbps</span>";
+    return out;
+  }
+  function highlightsHtml(l, tr) {   // three plain lines, built from what we know about the room
+    var x = l.trust || {}, st = l.transit, hs = [];
+    if (tr && campus) hs.push((tr.walk <= 30 ? "🚶 " + walkText(tr.walk) : "🚗 ~" + rideText(tr.ride)) + " " + t("hlTo") + " " + pick(campus.name));
+    if (st && st.min != null) hs.push("🚇 " + stationLabel(st) + " · " + walkText(st.min));
+    if (x.halal != null) hs.push("🍽️ " + t("halalFood") + ": " + walkText(x.halal));
+    if (l.wifi) hs.push("📶 " + t(l.wifi >= 100 ? "hlWifiFast" : "hlWifi") + " · " + l.wifi + " Mbps");
+    if (x.mosque != null) hs.push("🕌 " + t("mosque") + ": " + walkText(x.mosque));
+    if (x.arabic) hs.push("🗣️ " + t("arabicHost"));
+    if (l.furnished && l.bills) hs.push("🛋️ " + t("furnished") + " · " + t("bills"));
+    hs = hs.slice(0, 3);
+    return hs.length ? '<div class="dist hl"><b>' + t("highlights") + "</b><ul>" + hs.map(function (h) { return "<li>" + h + "</li>"; }).join("") + "</ul></div>" : "";
+  }
+  function rulesHtml(l) {
+    var txt = l.rules ? (lang === "ar" ? l.rules.ar : l.rules.en) : "";
+    var lines = String(txt || "").split(/\n+/).map(function (s) { return s.trim(); }).filter(Boolean);
+    return lines.length ? '<div class="dist rules"><b>' + t("rulesTitle") + "</b><ul>" + lines.map(function (s) { return "<li>" + s + "</li>"; }).join("") + "</ul></div>" : "";
+  }
+
   // ---- distance: straight line x 1.3 to approximate real streets; walking ~80 m/min ----
   function distKm(a, b, c, d) {
     var R = 6371, rad = Math.PI / 180, dLat = (c - a) * rad, dLng = (d - b) * rad;
@@ -323,10 +358,10 @@
   }
 
   function filtered() {
-    var area = $("area").value, type = $("type").value, who = $("gender").value, max = +$("price").value || 1e9, only = $("onlyAvail").checked, ver = $("onlyVerified").checked, stay = +$("stay").value, wmax = campus ? +$("walkMax").value : 0;
+    var area = $("area").value, type = $("type").value, who = $("gender").value, max = +$("price").value || 1e9, only = $("onlyAvail").checked, ver = $("onlyVerified").checked, stay = +$("stay").value, mv = $("moveIn").value, wmax = campus ? +$("walkMax").value : 0;
     var out = LISTINGS.map(function (l) { return { l: l, tr: campus ? trip(l, campus) : null }; }).filter(function (x) {
       var l = x.l;
-      return (!area || l.area === area) && (!type || l.type === type) && (!who || (l.gender || "mixed") === who) && l.price <= max && (!only || l.status === "available") && (!ver || isVerified(l)) && (!stay || l.minStay <= stay) && (!wmax || x.tr.walk <= wmax) && (!savedOnly || isSaved(l.id));
+      return (!area || l.area === area) && (!type || l.type === type) && (!who || (l.gender || "mixed") === who) && l.price <= max && (!only || l.status === "available") && (!ver || isVerified(l)) && (!stay || l.minStay <= stay) && (!wmax || x.tr.walk <= wmax) && (!savedOnly || isSaved(l.id)) && (!mv || !l.availableFrom || l.availableFrom <= mv);
     });
     var s = $("sort").value;
     out.sort(function (a, b) { return s === "near" && campus ? a.tr.km - b.tr.km : a.l.price - b.l.price; });
@@ -384,13 +419,14 @@
     var l = x.l;
     var chips = (x.tr ? '<span class="walk ' + (x.tr.walk <= 15 ? "near" : "") + '">' + tripText(x.tr) + "</span>" : "") +
       (isVerified(l) ? '<span class="walk gold">✔ ' + t("verified") + "</span>" : "") +
+      (futureAvail(l) ? '<span class="walk">📅 ' + availText(l) + "</span>" : "") +
       ((l.gender && l.gender !== "mixed") ? '<span class="walk who">' + t("g_" + l.gender) + "</span>" : "");
     var buttons = l.status !== "available" ? "" : canReserve(l)
       ? '<button type="button" class="btn wa" data-res="' + l.id + '">⚡ ' + t("reserve") + '</button><button type="button" class="btn alt" data-wa="' + l.id + '">💬 ' + t("cardWa") + "</button>"
       : '<button type="button" class="btn wa" data-wa="' + l.id + '">💬 ' + t("cardWa") + "</button>";
     return '<article class="card ' + (l.status === "taken" ? "dim" : "") + '" data-id="' + l.id + '" tabindex="0">' +
       '<div class="ph">' + trackHtml(l) + navHtml(l) + '<span class="badge ' + l.status + '">' + t(l.status) + "</span>" + heartBtn(l) + (l.photos.length > 1 ? '<span class="pcount">📷 ' + l.photos.length + "</span>" : "") + "</div>" +
-      '<div class="body"><h3>' + pick(l.title) + '</h3><div class="where">' + t(l.type) + " · " + l.area + " · " + t(l.furnished ? "furnished" : "unfurnished") + " · " + t(l.bills ? "bills" : "noBills") + "</div>" +
+      '<div class="body"><h3>' + pick(l.title) + '</h3><div class="where">' + t(l.type) + " · " + l.area + (l.sharing ? " · " + t("sh_" + l.sharing) : "") + " · " + t(l.furnished ? "furnished" : "unfurnished") + " · " + t(l.bills ? "bills" : "noBills") + "</div>" +
       (chips ? '<div class="chips">' + chips + "</div>" : "") +
       '<div class="stay">⏱ ' + t("minStayShort") + ": " + months(l.minStay) + "</div>" +
       '<div class="facts">' + transitLine(l) + costLine(l) + '<div class="fact">🕌 ' + (l.trust.mosque == null ? "–" : walkText(l.trust.mosque)) + (l.trust.arabic ? " · 🗣️ " + t("arabicShort") : "") + "</div></div>" +
@@ -502,8 +538,8 @@
       '<div class="price">' + money(l.price) + " <small>" + t("perMonth") + "</small></div>" +
       '<div class="tags"><span class="tag">' + t(l.type) + '</span><span class="tag">' + l.area + '</span><span class="tag">' + bedrooms(l.beds) +
       '</span><span class="tag stay-tag">⏱ ' + t("minStay") + ": " + months(l.minStay) + '</span><span class="tag">' + t(l.furnished ? "furnished" : "unfurnished") +
-      '</span><span class="tag">' + t(l.bills ? "bills" : "noBills") + '</span><span class="tag">' + t("g_" + (l.gender || "mixed")) + "</span></div>" +
-      "<p>" + pick(l.desc) + "</p>" + amenHtml(l) + dist + gettingHtml(l) + costHtml(l) +
+      '</span><span class="tag">' + t(l.bills ? "bills" : "noBills") + '</span><span class="tag">' + t("g_" + (l.gender || "mixed")) + "</span>" + factTags(l) + "</div>" +
+      highlightsHtml(l, tr) + "<p>" + pick(l.desc) + "</p>" + amenHtml(l) + dist + gettingHtml(l) + costHtml(l) + rulesHtml(l) +
       trustHtml(l) + '<div id="dmap" class="dmap"></div>' + safeHtml(l) +
       (ok ? '<div class="req">' + (canReserve(l)
           ? '<button id="resBtn" class="btn wa" type="button">⚡ ' + t("reserve") + '</button><button id="askBtn" class="btn alt" type="button">💬 ' + t("request") + "</button>"
@@ -714,7 +750,9 @@
       cost: r.deposit_months == null ? null : { deposit: Number(r.deposit_months), advance: Number(r.advance_months || 0), util: Number(r.utility_deposit || 0), agreement: !!r.agreement_provided },
       transit: { name: esc(r.station_name || ""), type: esc(r.station_type || ""), min: r.station_min, bus: r.bus_min },
       trust: { video: r.v_video, owner: r.v_owner, visited: r.v_visited, mosque: r.mosque_min, halal: r.halal_min, arabic: r.arabic },
-      created: r.created_at || null, verifiedAt: r.verified_at || null
+      created: r.created_at || null, verifiedAt: r.verified_at || null,
+      availableFrom: r.available_from || null, wifi: r.wifi_mbps || null, sharing: r.sharing || "", housemates: r.housemates == null ? null : r.housemates,
+      rules: { en: esc(r.house_rules_en || ""), ar: esc(r.house_rules_ar || r.house_rules_en || "") }
     };
   }
   function load() {
@@ -730,7 +768,7 @@
   // events
   // ---------------------------------------------------------------
   $("langBtn").onclick = function () { lang = lang === "ar" ? "en" : "ar"; try { localStorage.setItem("qareeb-lang", lang); } catch (e) {} applyLang(); };
-  ["walkMax", "area", "type", "gender", "price", "stay", "sort", "onlyAvail", "onlyVerified"].forEach(function (id) { $(id).onchange = render; });
+  ["walkMax", "area", "type", "gender", "price", "stay", "moveIn", "sort", "onlyAvail", "onlyVerified"].forEach(function (id) { $(id).onchange = render; });
   document.querySelectorAll(".vbtn").forEach(function (b) { b.onclick = function () { setView(b.dataset.view); }; });
   $("grid").onclick = function (e) {
     var ar = e.target.closest("[data-arrow]");

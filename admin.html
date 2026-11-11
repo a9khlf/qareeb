@@ -109,10 +109,12 @@
     .skyline{height:120px}
     .gate-form{margin-top:-44px;position:relative;z-index:2;padding:0 16px 40px}
   }
-  .drawer{position:sticky;top:0;height:100vh;overflow:auto;background:var(--midnight) var(--star);background-size:64px 64px;color:#cfe3e7;display:flex;flex-direction:column;padding:18px 14px 14px}
+  .drawer{position:sticky;top:0;height:100vh;overflow:auto;background:var(--midnight);color:#d9eaed;display:flex;flex-direction:column;padding:18px 14px 14px}
   .drawerclose{display:none;position:absolute;top:10px;inset-inline-end:10px;border:0;background:rgba(255,255,255,.1);color:#fff;width:34px;height:34px;border-radius:10px;font-size:16px;cursor:pointer}
   .usercard{display:flex;gap:12px;align-items:center;padding:6px 8px 16px;border-bottom:1px solid rgba(255,255,255,.12)}
-  .avatar{flex:0 0 auto;width:42px;height:42px;border-radius:50%;background:#c9a24a;color:var(--midnight);display:grid;place-items:center;font-weight:800;font-size:18px}
+  .avatar{flex:0 0 auto;width:48px;height:48px;border-radius:50%;border:0;padding:0;cursor:pointer;background:#c9a24a center/cover no-repeat;color:var(--midnight);display:grid;place-items:center;font:inherit;font-weight:800;font-size:19px;overflow:hidden}
+  .avatar:hover{box-shadow:0 0 0 3px rgba(224,194,125,.55)}
+  .photolink{display:block;border:0;background:none;padding:2px 0 0;margin:0;color:#e0c27d;font:inherit;font-size:12.5px;cursor:pointer;text-align:start;text-decoration:underline;text-underline-offset:2px}
   .usercard b{display:block;color:#fff;font-size:15px;line-height:1.25} .usercard small{color:#9dbcc3;font-size:12.5px}
   .navgroup{margin-top:16px}
   .navhead{margin:0 10px 6px;font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:#7ea3ab;font-weight:700}
@@ -260,7 +262,7 @@
 <div id="panel" class="app" hidden>
   <aside class="drawer" id="drawer" aria-label="Staff menu">
     <button class="drawerclose" id="drawerClose" type="button" aria-label="Close menu">✕</button>
-    <div class="usercard"><span class="avatar" id="uAvatar">Q</span><span><b id="uName"></b><small id="uRole"></small></span></div>
+    <div class="usercard"><button class="avatar" id="uAvatar" type="button" aria-label="Change your photo" title="Change your photo">Q</button><span><b id="uName"></b><small id="uRole"></small><button type="button" class="photolink" id="uPhoto">Add your photo</button></span><input id="uFile" type="file" accept="image/*" hidden></div>
     <nav>
       <div class="navgroup"><p class="navhead">Today</p>
         <button class="tab on" data-tab="home" type="button">Overview</button>

@@ -72,12 +72,49 @@
     $("loginBox").hidden = true; $("panel").hidden = false; document.body.classList.add("inapp");
     var nm = access.name || access.email;
     $("uName").textContent = nm; $("uRole").textContent = ROLES[access.role] ? ROLES[access.role].label : access.role;
-    $("uAvatar").textContent = (nm.trim().charAt(0) || "Q").toUpperCase();
+    paintAvatar(); loadAvatar();
     var tabs = { requests: can("leads_view"), suggest: can("centers_edit"), staff: can("staff_manage"), owners: can("rooms_edit") || can("leads_view"), history: can("staff_manage"), site: can("site_edit") };
     document.querySelectorAll(".tab").forEach(function (b) { b.hidden = tabs[b.dataset.tab] === false; });
     document.querySelectorAll(".navgroup").forEach(function (g) { g.hidden = !g.querySelector(".tab:not([hidden])"); });
     loadAll();
   }
+  // ---- my profile photo (round picture in the menu; each person changes only their own) ----
+  var avatarUrl = "";
+  function paintAvatar() {
+    var a = $("uAvatar"), nm = (access && (access.name || access.email)) || "Q";
+    if (avatarUrl) { a.style.backgroundImage = "url('" + avatarUrl + "')"; a.textContent = ""; }
+    else { a.style.backgroundImage = ""; a.textContent = (nm.trim().charAt(0) || "Q").toUpperCase(); }
+    $("uPhoto").textContent = avatarUrl ? "Change photo" : "Add your photo";
+  }
+  function loadAvatar() {
+    api("/rest/v1/rpc/my_avatar", { method: "POST", body: {} }).then(function (u) {
+      avatarUrl = typeof u === "string" && /^https:\/\/[A-Za-z0-9._~:\/?#@!$&*+,;=%-]+$/.test(u) ? u : ""; paintAvatar();
+    }).catch(function () {});   // before supabase/update-16.sql is run, there is simply no photo
+  }
+  function squareShrink(file, size) {   // centre square, so faces stay in the circle
+    return new Promise(function (res, rej) {
+      var img = new Image(), u = URL.createObjectURL(file);
+      img.onload = function () {
+        var s = Math.min(img.width, img.height), c = document.createElement("canvas"); c.width = c.height = size;
+        c.getContext("2d").drawImage(img, (img.width - s) / 2, (img.height - s) / 2, s, s, 0, 0, size, size);
+        c.toBlob(function (b) { URL.revokeObjectURL(u); b ? res(b) : rej(new Error("Could not process the image")); }, "image/jpeg", 0.88);
+      };
+      img.onerror = function () { URL.revokeObjectURL(u); rej(new Error("That file is not a valid image")); };
+      img.src = u;
+    });
+  }
+  $("uAvatar").onclick = $("uPhoto").onclick = function () { $("uFile").click(); };
+  $("uFile").onchange = function () {
+    var inp = this, f = inp.files && inp.files[0]; if (!f) return;
+    msg("Saving your photo...");
+    squareShrink(f, 320).then(function (b) { return upload("staff-photos", b, "jpg", "image/jpeg"); }).then(function (u) {
+      return api("/rest/v1/rpc/set_my_avatar", { method: "POST", body: { p: u } }).then(function (ok) {
+        if (!ok) throw new Error("Your photo could not be saved. Please try again.");
+        avatarUrl = u; paintAvatar(); msg("Your photo is saved.");
+      });
+    }).catch(function (e) { msg(e.message, true); }).then(function () { inp.value = ""; });
+  };
+
   // side drawer (always open on a computer, slides in on a phone)
   function openDrawer(on) { $("drawer").classList.toggle("open", on); $("scrim").hidden = !on; }
   $("menuBtn2").onclick = function () { openDrawer(true); };

@@ -1012,6 +1012,8 @@
       '<div style="margin-top:12px"><span style="font-size:13px;font-weight:600">Advantages (tick what applies)</span><div class="row2" style="margin-top:6px">' + amenityChecks(r.amenities || []) + "</div></div></fieldset>" +
       '<fieldset><legend>Verification (tick only what you really checked)</legend>' +
       chk("v_video", "Live video tour completed", r.v_video) + chk("v_owner", "Owner identity checked", r.v_owner) + chk("v_visited", "Visited in person by the Qareeb team", r.v_visited) +
+      (state.rooms.length && "verified_at" in state.rooms[0]
+        ? '<div class="fld"><label for="f-va">Date Qareeb checked this room</label><input id="f-va" name="verified_at" type="date" value="' + esc(r.verified_at || "") + '"></div><p class="help">Students see "Checked by Qareeb on ..." once the video tour and the owner check are both ticked. Leave it empty to use today\'s date.</p>' : "") +
       '<div class="row2"><div class="fld"><label for="f-mo">Walking minutes to nearest mosque</label><input id="f-mo" name="mosque_min" type="number" min="0" max="120" value="' + esc(r.mosque_min == null ? "" : r.mosque_min) + '"></div>' +
       '<div class="fld"><label for="f-ha">Walking minutes to halal food</label><input id="f-ha" name="halal_min" type="number" min="0" max="120" value="' + esc(r.halal_min == null ? "" : r.halal_min) + '"></div></div>' +
       chk("arabic", "Arabic-speaking owner or tenants", r.arabic) + "</fieldset>" +
@@ -1100,6 +1102,11 @@
       station_min: num(d.get("station_min")), bus_min: num(d.get("bus_min")), amenities: d.getAll("amen"),
       owner_id: num(d.get("owner_id"))
     };
+    if (d.has("verified_at")) {   // only once the database has the column (supabase/update-15.sql)
+      var va = d.get("verified_at") || null;
+      if (!va && body.v_video && body.v_owner) va = new Date(Date.now() + 8 * 36e5).toISOString().slice(0, 10);   // today in Malaysia
+      body.verified_at = body.v_video && body.v_owner ? va : null;
+    }
     var req = isNew ? api("/rest/v1/listings", { method: "POST", body: body, write: true }) : api("/rest/v1/listings?id=eq." + old.id, { method: "PATCH", body: body, write: true });
     $("saveBtn").disabled = true;
     req.then(function () {

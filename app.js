@@ -72,7 +72,11 @@
       safe2: "Do not pay a deposit because someone says \"hurry, others want it\".",
       safe3: "Do not pay 6 months or more in advance. Ask for a written tenancy agreement.",
       safe4: "Pay to the owner's verified account, not to a personal name you do not know.",
-      safe5: "Scammed? Call Malaysia's National Scam Response Centre: 997"
+      safe5: "Scammed? Call Malaysia's National Scam Response Centre: 997",
+      saveRoom: "Save this room", unsaveRoom: "Remove from saved", savedTab: "Saved",
+      saveEmpty: "You have not saved any rooms yet. Tap the heart on a room to keep it here.",
+      moreTitle: "More rooms nearby", sameBuilding: "Same building",
+      checkedOn: "Checked by Qareeb on", addedToday: "Added today", addedYesterday: "Added yesterday", addedOn: "Added on"
     },
     ar: {
       navRooms: "الغرف", navHow: "كيف يعمل", navContact: "تواصل معنا", menuLabel: "القائمة",
@@ -136,7 +140,11 @@
       safe2: "لا تدفع عربوناً بسبب عبارات مثل «بادر، فهناك من يريدها».",
       safe3: "لا تدفع إيجار ٦ أشهر أو أكثر مقدماً، واطلب عقد إيجار مكتوباً.",
       safe4: "ادفع إلى حساب المالك الموثّق، لا إلى اسم شخص لا تعرفه.",
-      safe5: "هل تعرضت للاحتيال؟ اتصل بمركز الاستجابة الوطني للاحتيال في ماليزيا: 997"
+      safe5: "هل تعرضت للاحتيال؟ اتصل بمركز الاستجابة الوطني للاحتيال في ماليزيا: 997",
+      saveRoom: "احفظ هذه الغرفة", unsaveRoom: "إزالة من المحفوظات", savedTab: "المحفوظة",
+      saveEmpty: "لم تحفظ أي غرفة بعد. اضغط على القلب في أي غرفة لتبقى هنا.",
+      moreTitle: "غرف قريبة أخرى", sameBuilding: "نفس المبنى",
+      checkedOn: "تحقق منها فريق قريب بتاريخ", addedToday: "أضيفت اليوم", addedYesterday: "أضيفت أمس", addedOn: "أضيفت بتاريخ"
     }
   };
   // The wording staff can change from the staff area lives in sitetext.js (original wording);
@@ -203,6 +211,50 @@
   function rideText(n) { return lang === "ar" ? numAr(n) + unit(n) + " بالسيارة" : n + " " + t("ride"); }
   function money(n) { return "RM " + Number(n).toLocaleString("en-US"); }
 
+  // ---- saved rooms: kept only on this phone or computer, no account needed ----
+  var saved = [], savedOnly = false;
+  try { saved = (JSON.parse(localStorage.getItem("qareeb-saved") || "[]") || []).filter(function (x) { return Number.isInteger(x); }); } catch (e) { saved = []; }
+  function isSaved(id) { return saved.indexOf(id) >= 0; }
+  function heartBtn(l, extra) {
+    var on = isSaved(l.id);
+    return '<button type="button" class="heart' + (extra ? " " + extra : "") + (on ? " on" : "") + '" data-save="' + l.id + '" aria-pressed="' + on + '" aria-label="' + t(on ? "unsaveRoom" : "saveRoom") + '">' + (on ? "♥" : "♡") + "</button>";
+  }
+  function savedUI() {
+    var n = saved.filter(function (id) { return roomById(id); }).length, b = $("savedBtn");
+    $("savedN").textContent = n ? "(" + n + ")" : "";
+    b.classList.toggle("on", savedOnly); b.setAttribute("aria-pressed", savedOnly ? "true" : "false");
+    document.querySelectorAll(".heart[data-save]").forEach(function (h) {
+      var on = isSaved(+h.dataset.save);
+      h.classList.toggle("on", on); h.setAttribute("aria-pressed", on ? "true" : "false");
+      h.setAttribute("aria-label", t(on ? "unsaveRoom" : "saveRoom")); h.textContent = on ? "♥" : "♡";
+    });
+  }
+  function toggleSaved(id) {
+    var i = saved.indexOf(id); if (i >= 0) saved.splice(i, 1); else saved.push(id);
+    try { localStorage.setItem("qareeb-saved", JSON.stringify(saved)); } catch (e) {}
+    if (savedOnly) render(); else savedUI();
+  }
+
+  // ---- dates and distances shown on the room page ----
+  function fmtDate(s, tz) {
+    var d = new Date(s); if (isNaN(d)) return "";
+    try { return d.toLocaleDateString(lang === "ar" ? "ar-u-nu-latn" : "en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: tz }); } catch (e) { return String(s).slice(0, 10); }
+  }
+  function addedText(s) {
+    var d = new Date(s); if (isNaN(d)) return "";
+    var n = Math.max(0, Math.floor((Date.now() - d.getTime()) / 864e5));
+    if (n >= 30) return t("addedOn") + " " + fmtDate(s, "Asia/Kuala_Lumpur");
+    if (n === 0) return t("addedToday");
+    if (n === 1) return t("addedYesterday");
+    if (lang === "ar") return "أضيفت قبل " + (n === 2 ? "يومين" : n <= 10 ? n + " أيام" : n + " يوماً");
+    return "Added " + n + " days ago";
+  }
+  function awayText(km) {
+    if (km < 0.1) return t("sameBuilding");
+    var k = "⁦" + km.toFixed(1) + " km⁩";
+    return lang === "ar" ? "على بعد " + k : k + " away";
+  }
+
   // ---- distance: straight line x 1.3 to approximate real streets; walking ~80 m/min ----
   function distKm(a, b, c, d) {
     var R = 6371, rad = Math.PI / 180, dLat = (c - a) * rad, dLng = (d - b) * rad;
@@ -225,7 +277,9 @@
   function row(ok, label) { return '<li style="margin:4px 0">' + (ok ? "✅ " : "⬜ ") + label + (ok ? "" : ' <small style="color:var(--muted)">(' + t("notYet") + ")</small>") + "</li>"; }
   function trustHtml(l) {
     var x = l.trust;
-    return '<div class="dist trust"><b>' + t("trustTitle") + '</b><ul style="list-style:none;padding:0;margin:8px 0 0">' +
+    return '<div class="dist trust"><b>' + t("trustTitle") + "</b>" +
+      (isVerified(l) && l.verifiedAt ? '<p class="checked">✔ ' + t("checkedOn") + " <b>" + fmtDate(l.verifiedAt, "UTC") + "</b></p>" : "") +
+      '<ul style="list-style:none;padding:0;margin:8px 0 0">' +
       row(x.video, t("vVideo")) + row(x.owner, t("vOwner")) + row(x.visited, t("vVisit")) +
       '<li style="margin:4px 0">🕌 ' + t("mosque") + ": " + (x.mosque == null ? t("unknown") : "<b>" + walkText(x.mosque) + "</b>") + "</li>" +
       '<li style="margin:4px 0">🍽️ ' + t("halalFood") + ": " + (x.halal == null ? t("unknown") : "<b>" + walkText(x.halal) + "</b>") + "</li>" +
@@ -272,7 +326,7 @@
     var area = $("area").value, type = $("type").value, who = $("gender").value, max = +$("price").value || 1e9, only = $("onlyAvail").checked, ver = $("onlyVerified").checked, stay = +$("stay").value, wmax = campus ? +$("walkMax").value : 0;
     var out = LISTINGS.map(function (l) { return { l: l, tr: campus ? trip(l, campus) : null }; }).filter(function (x) {
       var l = x.l;
-      return (!area || l.area === area) && (!type || l.type === type) && (!who || (l.gender || "mixed") === who) && l.price <= max && (!only || l.status === "available") && (!ver || isVerified(l)) && (!stay || l.minStay <= stay) && (!wmax || x.tr.walk <= wmax);
+      return (!area || l.area === area) && (!type || l.type === type) && (!who || (l.gender || "mixed") === who) && l.price <= max && (!only || l.status === "available") && (!ver || isVerified(l)) && (!stay || l.minStay <= stay) && (!wmax || x.tr.walk <= wmax) && (!savedOnly || isSaved(l.id));
     });
     var s = $("sort").value;
     out.sort(function (a, b) { return s === "near" && campus ? a.tr.km - b.tr.km : a.l.price - b.l.price; });
@@ -335,8 +389,8 @@
       ? '<button type="button" class="btn wa" data-res="' + l.id + '">⚡ ' + t("reserve") + '</button><button type="button" class="btn alt" data-wa="' + l.id + '">💬 ' + t("cardWa") + "</button>"
       : '<button type="button" class="btn wa" data-wa="' + l.id + '">💬 ' + t("cardWa") + "</button>";
     return '<article class="card ' + (l.status === "taken" ? "dim" : "") + '" data-id="' + l.id + '" tabindex="0">' +
-      '<div class="ph">' + trackHtml(l) + navHtml(l) + '<span class="badge ' + l.status + '">' + t(l.status) + "</span></div>" +
-      '<div class="body"><h3>' + pick(l.title) + '</h3><div class="where">' + t(l.type) + " · " + l.area + "</div>" +
+      '<div class="ph">' + trackHtml(l) + navHtml(l) + '<span class="badge ' + l.status + '">' + t(l.status) + "</span>" + heartBtn(l) + (l.photos.length > 1 ? '<span class="pcount">📷 ' + l.photos.length + "</span>" : "") + "</div>" +
+      '<div class="body"><h3>' + pick(l.title) + '</h3><div class="where">' + t(l.type) + " · " + l.area + " · " + t(l.furnished ? "furnished" : "unfurnished") + " · " + t(l.bills ? "bills" : "noBills") + "</div>" +
       (chips ? '<div class="chips">' + chips + "</div>" : "") +
       '<div class="stay">⏱ ' + t("minStayShort") + ": " + months(l.minStay) + "</div>" +
       '<div class="facts">' + transitLine(l) + costLine(l) + '<div class="fact">🕌 ' + (l.trust.mosque == null ? "–" : walkText(l.trust.mosque)) + (l.trust.arabic ? " · 🗣️ " + t("arabicShort") : "") + "</div></div>" +
@@ -347,7 +401,7 @@
     var list = filtered(), g = $("grid"), html = "";
     if (list.length && campus && currentRef() && onceThisSession("qareeb-look")) linkVisit("look");
     $("count").textContent = list.length + " " + t(list.length === 1 ? "resultOne" : "resultMany");
-    $("empty").textContent = loadFailed ? t("loadErr") : t("empty");
+    $("empty").textContent = loadFailed ? t("loadErr") : (savedOnly && !saved.length ? t("saveEmpty") : t("empty"));
     $("empty").hidden = list.length > 0 && !loadFailed;
     if (!campus) html += '<p class="hint">' + t("chooseCenter") + "</p>";
     if (campus && $("sort").value === "near" && !+$("walkMax").value) {
@@ -356,6 +410,7 @@
       if (far.length) html += '<h2 class="grp">' + t("farGroup") + "</h2>" + far.map(card).join("");
     } else html += list.map(card).join("");
     g.innerHTML = html;
+    savedUI();
     if (map) renderMarkers(list);
   }
 
@@ -418,6 +473,18 @@
     };
   }
 
+  // Up to three other available rooms close to this one (same building first)
+  function nearbyHtml(l) {
+    var list = LISTINGS.filter(function (o) { return o.id !== l.id && o.status === "available"; })
+      .map(function (o) { return { o: o, km: distKm(l.lat, l.lng, o.lat, o.lng) }; })
+      .filter(function (x) { return x.km <= 4; })
+      .sort(function (a, b) { return a.km - b.km; }).slice(0, 3);
+    if (!list.length) return "";
+    return '<div class="more"><b>' + t("moreTitle") + '</b><div class="morelist">' + list.map(function (x) {
+      return '<button type="button" class="mini" data-more="' + x.o.id + '"><span class="mph" style="' + photoStyle(x.o) + '"></span><span class="mt"><b>' + pick(x.o.title) + "</b><small>" + money(x.o.price) + " · " + awayText(x.km) + "</small></span></button>";
+    }).join("") + "</div></div>";
+  }
+
   function openDetail(id) {
     var l = LISTINGS.filter(function (x) { return x.id === id; })[0], tr = campus ? trip(l, campus) : null;
     var shots = (l.photos.length ? l.photos.map(function (p) { return '<img src="' + p + '" alt="">'; }) :
@@ -428,8 +495,9 @@
       ? '<div class="dist"><b>' + t("fromCampus") + ": " + pick(campus.name) + '</b><div style="margin-top:8px"><b>' + tripText(tr) + "</b></div>" +
         '<a href="https://www.google.com/maps/dir/?api=1&travelmode=walking&origin=' + campus.lat + "," + campus.lng + "&destination=" + l.lat + "," + l.lng + '" target="_blank" rel="noopener" style="font-size:14px">' + t("directions") + '</a><div class="small">' + t("distNote") + "</div></div>"
       : '<div class="dist">' + t("chooseCenter") + "</div>";
-    $("detail").innerHTML = '<div class="slider det"><div class="gallery track">' + shots + "</div>" + navHtml(l) + "</div>" + vid +
+    $("detail").innerHTML = '<div class="slider det"><div class="gallery track">' + shots + "</div>" + navHtml(l) + heartBtn(l, "det") + "</div>" + vid +
       '<div class="d"><span class="badge ' + l.status + '" style="position:static;border:1px solid var(--line)">' + t(l.status) + "</span>" +
+      (l.created ? '<span class="added">' + addedText(l.created) + "</span>" : "") +
       "<h2>" + pick(l.title) + "</h2>" +
       '<div class="price">' + money(l.price) + " <small>" + t("perMonth") + "</small></div>" +
       '<div class="tags"><span class="tag">' + t(l.type) + '</span><span class="tag">' + l.area + '</span><span class="tag">' + bedrooms(l.beds) +
@@ -441,8 +509,9 @@
           ? '<button id="resBtn" class="btn wa" type="button">⚡ ' + t("reserve") + '</button><button id="askBtn" class="btn alt" type="button">💬 ' + t("request") + "</button>"
           : '<button id="askBtn" class="btn wa" type="button">💬 ' + t("request") + "</button>") +
         '<button id="tourBtn" class="btn alt" type="button">🎥 ' + t("tourBtn") + '</button><p class="note">' + t(canReserve(l) ? "resNote2" : "reqNote") + "</p></div>"
-        : '<span class="btn wa off">' + t("notAvail") + "</span>") + "</div>";
+        : '<span class="btn wa off">' + t("notAvail") + "</span>") + nearbyHtml(l) + "</div>";
     $("modal").hidden = false; document.body.style.overflow = "hidden";
+    $("modal").querySelector(".sheet").scrollTop = 0;
     if ($("askBtn")) $("askBtn").onclick = function () { askRoom(l); };
     if ($("resBtn")) $("resBtn").onclick = function () { openReserve(l); };
     if ($("tourBtn")) $("tourBtn").onclick = function () { tourRoom(l); };
@@ -644,7 +713,8 @@
       amenities: (r.amenities || []).filter(function (k) { return /^[a-z]+$/.test(k); }),
       cost: r.deposit_months == null ? null : { deposit: Number(r.deposit_months), advance: Number(r.advance_months || 0), util: Number(r.utility_deposit || 0), agreement: !!r.agreement_provided },
       transit: { name: esc(r.station_name || ""), type: esc(r.station_type || ""), min: r.station_min, bus: r.bus_min },
-      trust: { video: r.v_video, owner: r.v_owner, visited: r.v_visited, mosque: r.mosque_min, halal: r.halal_min, arabic: r.arabic }
+      trust: { video: r.v_video, owner: r.v_owner, visited: r.v_visited, mosque: r.mosque_min, halal: r.halal_min, arabic: r.arabic },
+      created: r.created_at || null, verifiedAt: r.verified_at || null
     };
   }
   function load() {
@@ -665,6 +735,8 @@
   $("grid").onclick = function (e) {
     var ar = e.target.closest("[data-arrow]");
     if (ar) { e.stopPropagation(); slideBy(ar, +ar.dataset.arrow); return; }
+    var sv = e.target.closest("[data-save]");
+    if (sv) { e.stopPropagation(); toggleSaved(+sv.dataset.save); return; }
     var rs = e.target.closest("[data-res]");
     if (rs) { e.stopPropagation(); var rl = roomById(+rs.dataset.res); if (rl) openReserve(rl); return; }
     var w = e.target.closest("[data-wa]");
@@ -675,9 +747,14 @@
     if ((e.key === "ArrowLeft" || e.key === "ArrowRight") && e.target.closest(".card")) {   // keyboard arrows switch pictures
       e.preventDefault(); slideBy(e.target.closest(".card").querySelector(".ph"), e.key === "ArrowRight" ? 1 : -1, true); return;
     }
-    if (e.target.closest("[data-wa],[data-res],[data-arrow]")) return;   // the buttons handle their own Enter/Space
+    if (e.target.closest("[data-wa],[data-res],[data-arrow],[data-save]")) return;   // the buttons handle their own Enter/Space
     if (e.key === "Enter" || e.key === " ") { var c = e.target.closest(".card"); if (c) { e.preventDefault(); openDetail(+c.dataset.id); } }
   };
+  $("detail").onclick = function (e) {
+    var sv = e.target.closest("[data-save]"); if (sv) { toggleSaved(+sv.dataset.save); return; }
+    var m = e.target.closest("[data-more]"); if (m) openDetail(+m.dataset.more);
+  };
+  $("savedBtn").onclick = function () { savedOnly = !savedOnly; render(); };
   $("close").onclick = closeDetail;
   $("resClose").onclick = closeRes;
   $("resModal").onclick = function (e) { if (e.target === $("resModal")) closeRes(); };

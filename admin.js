@@ -2,7 +2,7 @@
   "use strict";
   var SB = window.QAREEB_SUPABASE, KEY = "qareeb-admin-session";
   var $ = function (id) { return document.getElementById(id); };
-  var state = { tab: "home", rooms: [], centers: [], requests: [], suggestions: [], staff: [], notes: {}, team: [], owners: [], activity: [], links: [], linkEvents: [], announcements: [], reads: [], names: [] };
+  var state = { tab: "home", rooms: [], centers: [], requests: [], suggestions: [], staff: [], notes: {}, team: [], owners: [], activity: [], links: [], linkEvents: [], announcements: [], reads: [], names: [], profiles: [] };
   var session = null, access = null;
   var ROLES = {
     owner:      { label: "Owner",            note: "Everything, including staff and their access." },
@@ -84,7 +84,7 @@
     var a = $("uAvatar"), nm = (access && (access.name || access.email)) || "Q";
     if (avatarUrl) { a.style.backgroundImage = "url('" + avatarUrl + "')"; a.textContent = ""; }
     else { a.style.backgroundImage = ""; a.textContent = (nm.trim().charAt(0) || "Q").toUpperCase(); }
-    $("uPhoto").textContent = avatarUrl ? "Change photo" : "Add your photo";
+    $("uPhoto").textContent = "My profile";
   }
   function loadAvatar() {
     api("/rest/v1/rpc/my_avatar", { method: "POST", body: {} }).then(function (u) {
@@ -103,14 +103,14 @@
       img.src = u;
     });
   }
-  $("uAvatar").onclick = $("uPhoto").onclick = function () { $("uFile").click(); };
+  $("uAvatar").onclick = $("uPhoto").onclick = function () { document.querySelector('.tab[data-tab="profile"]').click(); };
   $("uFile").onchange = function () {
     var inp = this, f = inp.files && inp.files[0]; if (!f) return;
     msg("Saving your photo...");
     squareShrink(f, 320).then(function (b) { return upload("staff-photos", b, "jpg", "image/jpeg"); }).then(function (u) {
       return api("/rest/v1/rpc/set_my_avatar", { method: "POST", body: { p: u } }).then(function (ok) {
         if (!ok) throw new Error("Your photo could not be saved. Please try again.");
-        avatarUrl = u; paintAvatar(); msg("Your photo is saved.");
+        avatarUrl = u; syncMe(); msg("Your photo is saved.");
       });
     }).catch(function (e) { msg(e.message, true); }).then(function () { inp.value = ""; });
   };
@@ -211,8 +211,9 @@
       can("leads_view") ? api("/rest/v1/link_events?select=slug,event,at&at=gte." + encodeURIComponent(new Date(Date.now() - 30 * 864e5).toISOString()) + "&order=at.desc&limit=10000").catch(none) : none(),
       api("/rest/v1/announcements?select=*&order=created_at.desc&limit=100").catch(none),
       api("/rest/v1/announcement_reads?select=*").catch(none),
-      api("/rest/v1/rpc/team_names", { method: "POST", body: {} }).catch(none)
-    ]).then(function (r) { state.announcements = r[12] || []; state.reads = r[13] || []; state.names = r[14] || []; state.links = r[10] || []; state.linkEvents = r[11] || []; state.site = (r[9] && r[9][0]) || null; state.rooms = r[0] || []; state.centers = r[1] || []; state.requests = r[2] || []; state.suggestions = r[3] || []; state.staff = r[4] || []; state.team = r[6] || []; state.owners = r[7] || []; state.activity = r[8] || []; groupNotes(r[5] || []); render(); })
+      api("/rest/v1/rpc/team_names", { method: "POST", body: {} }).catch(none),
+      api("/rest/v1/rpc/team_profiles", { method: "POST", body: {} }).catch(none)
+    ]).then(function (r) { state.profiles = r[15] || []; state.announcements = r[12] || []; state.reads = r[13] || []; state.names = r[14] || []; state.links = r[10] || []; state.linkEvents = r[11] || []; state.site = (r[9] && r[9][0]) || null; state.rooms = r[0] || []; state.centers = r[1] || []; state.requests = r[2] || []; state.suggestions = r[3] || []; state.staff = r[4] || []; state.team = r[6] || []; state.owners = r[7] || []; state.activity = r[8] || []; groupNotes(r[5] || []); render(); })
       .catch(function (e) { msg("Could not load data: " + e.message, true); });
   }
 
@@ -243,11 +244,11 @@
     if (nt) nt.textContent = "Announcements" + (unreadN ? " (" + unreadN + " new)" : "");
     renderBanners();
     $("addBtn").textContent = state.tab === "centers" ? "+ Add center" : state.tab === "staff" ? "+ Add staff member" : state.tab === "owners" ? "+ Add owner" : "+ Add room";
-    var TITLES = { home: "Overview", search: "Search results", share: "Student page (share)", site: "Edit website", rooms: "Rooms", requests: "Leads", owners: "Owners", centers: "Language centers", suggest: "Center suggestions", news: "Announcements", staff: "Team", history: "Audit log" };
+    var TITLES = { home: "Overview", search: "Search results", share: "Student page (share)", site: "Edit website", rooms: "Rooms", requests: "Leads", owners: "Owners", centers: "Language centers", suggest: "Center suggestions", news: "Announcements", profile: "My profile", staff: "Team", history: "Audit log" };
     $("pageTitle").textContent = TITLES[state.tab] || "";
-    $("addBtn").hidden = state.tab === "home" || state.tab === "search" || state.tab === "share" || state.tab === "site" || state.tab === "news" || state.tab === "history" || state.tab === "requests" || state.tab === "suggest" ||
+    $("addBtn").hidden = state.tab === "home" || state.tab === "profile" ||state.tab === "search" || state.tab === "share" || state.tab === "site" || state.tab === "news" || state.tab === "history" || state.tab === "requests" || state.tab === "suggest" ||
       ((state.tab === "rooms" || state.tab === "owners") && !can("rooms_edit")) || (state.tab === "centers" && !can("centers_edit"));
-    if (state.tab === "home") renderHome(); else if (state.tab === "search") renderSearch(); else if (state.tab === "share") renderShare(); else if (state.tab === "site") renderSite(); else if (state.tab === "rooms") renderRooms(); else if (state.tab === "requests") renderRequests(); else if (state.tab === "suggest") renderSuggestions(); else if (state.tab === "news") renderNews(); else if (state.tab === "staff") renderStaff();
+    if (state.tab === "home") renderHome(); else if (state.tab === "search") renderSearch(); else if (state.tab === "share") renderShare(); else if (state.tab === "site") renderSite(); else if (state.tab === "rooms") renderRooms(); else if (state.tab === "requests") renderRequests(); else if (state.tab === "suggest") renderSuggestions(); else if (state.tab === "news") renderNews(); else if (state.tab === "profile") renderProfile(); else if (state.tab === "staff") renderStaff();
     else if (state.tab === "owners") renderOwners(); else if (state.tab === "history") renderHistory(); else renderCenters();
   }
   // ------------------------------------------------------------ announcements (with read receipts)
@@ -612,6 +613,61 @@
   }
   function openWork(email) { return state.requests.filter(function (r) { return r.assigned_to === email && r.status !== "rented" && r.status !== "lost"; }).length; }
   function linkCount(email) { return state.links.filter(function (k) { return k.agent_email === email && k.active; }).length; }
+  // ------------------------------------------------------------ my profile (every team member has one)
+  var PERM_TEXT = [["rooms_edit", "Add and edit rooms"], ["rooms_delete", "Delete rooms"], ["centers_edit", "Edit language centers"], ["leads_view", "See student requests"], ["leads_edit", "Work on student requests"], ["site_edit", "Edit the website wording"], ["announce", "Post announcements"], ["staff_manage", "Manage the team"]];
+  var SAFE_IMG = /^https:\/\/[A-Za-z0-9._~:\/?#@!$&*+,;=%-]+$/;
+  function avatarHtml(url, name, size) {   // round photo, or the first letter when there is no photo
+    var ok = url && SAFE_IMG.test(url), ch = esc(String(name || "Q").trim().charAt(0).toUpperCase() || "Q");
+    return '<span class="pav" style="width:' + size + "px;height:" + size + "px;font-size:" + Math.round(size * 0.42) + "px" + (ok ? ";background-image:url('" + url + "')" : "") + '">' + (ok ? "" : ch) + "</span>";
+  }
+  function syncMe() {   // after my photo or name changes, update every place that shows me
+    var mine = function (x) { return x.email === access.email; };
+    [state.profiles, state.staff].forEach(function (list) { var p = list.filter(mine)[0]; if (p) { p.avatar_url = avatarUrl || null; p.name = access.name; } });
+    $("uName").textContent = access.name || access.email; paintAvatar();
+    if (state.tab === "profile") renderProfile();
+  }
+  function renderProfile() {
+    var me = access, nm = me.name || me.email, roleOf = function (r) { return ROLES[r] ? ROLES[r].label : ""; };
+    var perms = PERM_TEXT.filter(function (p) { return can(p[0]); }).map(function (p) { return '<span class="chip ok">' + p[1] + "</span>"; }).join("") || '<span class="meta2">You can look at things but not change them.</span>';
+    var others = (state.profiles.length ? state.profiles : state.names.map(function (n) { return { email: n.email, name: n.name, role: "", avatar_url: null }; })).filter(function (p) { return p.email !== me.email; });
+    var team = [{ email: me.email, name: nm, role: me.role, avatar_url: avatarUrl }].concat(others);
+    var work = can("leads_view") ? '<div class="pstats"><div><b>' + openWork(me.email) + "</b><span>open leads</span></div><div><b>" + linkCount(me.email) + "</b><span>active links</span></div></div>" : "";
+    var link = me.ref_code
+      ? '<h3>My personal link</h3><p class="help" style="margin:0 0 10px">Students who arrive through it are credited to you.</p><div class="copyrow"><input readonly id="pf-link" value="' + esc(mineUrl("")) + '" aria-label="My personal link"><button type="button" class="btn sm" id="pfCopy">Copy</button></div>'
+      : '<h3>My personal link</h3><p class="help">You do not have a personal link yet.</p>';
+    $("list").innerHTML = '<div class="pfgrid">' +
+      '<section class="pcard wide"><div class="profhead">' + avatarHtml(avatarUrl, nm, 96) + "<div><h2>" + esc(nm) + '</h2><p class="meta2" style="margin:0">' + esc(me.email) + " · " + esc(roleOf(me.role)) + '</p><div class="acts"><button type="button" class="btn sm" id="pfPhoto">' + (avatarUrl ? "Change photo" : "Add your photo") + "</button>" + (avatarUrl ? '<button type="button" class="btn sec sm" id="pfRemove">Remove photo</button>' : "") + "</div></div></div>" +
+      '<form id="pfName" class="pfform"><div class="fld"><label for="pf-name">Your name</label><input id="pf-name" maxlength="60" required autocomplete="name" value="' + esc(me.name || "") + '"></div><button class="btn sm" type="submit">Save name</button></form></section>' +
+      '<section class="pcard"><h3>What you can do</h3><div class="chipsrow">' + perms + "</div>" + work + "</section>" +
+      '<section class="pcard">' + link + "</section>" +
+      '<section class="pcard"><h3>Change your password</h3><form id="pfPw"><div class="fld"><label for="pf-pw">New password (8 or more characters)</label><input id="pf-pw" type="password" minlength="8" required autocomplete="new-password"></div><div class="fld"><label for="pf-pw2">Type it again</label><input id="pf-pw2" type="password" minlength="8" required autocomplete="new-password"></div><button class="btn sm" type="submit" id="pfPwBtn">Change password</button></form></section>' +
+      '<section class="pcard wide"><h3>The team (' + team.length + ')</h3><div class="mates">' + team.map(function (p) {
+        return '<div class="mate">' + avatarHtml(p.avatar_url, p.name || p.email, 44) + "<div><b>" + esc(p.name || p.email) + (p.email === me.email ? ' <span class="chip">You</span>' : "") + '</b><span class="meta2">' + esc(roleOf(p.role)) + "</span></div></div>";
+      }).join("") + "</div></section></div>";
+    $("pfPhoto").onclick = function () { $("uFile").click(); };
+    if ($("pfRemove")) $("pfRemove").onclick = function () {
+      api("/rest/v1/rpc/set_my_avatar", { method: "POST", body: { p: null } }).then(function () { avatarUrl = ""; syncMe(); msg("Your photo is removed."); }).catch(function (e) { msg(e.message, true); });
+    };
+    $("pfName").onsubmit = function (e) {
+      e.preventDefault(); var v = $("pf-name").value.trim(); if (!v) return;
+      api("/rest/v1/rpc/set_my_name", { method: "POST", body: { p: v } }).then(function (ok) {
+        if (!ok) throw new Error("Your name could not be saved. Please try again.");
+        access.name = v; syncMe(); msg("Your name is saved.");
+      }).catch(function (er) { msg(er.message, true); });
+    };
+    if ($("pfCopy")) $("pfCopy").onclick = function () { copyText($("pf-link").value); };
+    $("pfPw").onsubmit = function (e) {
+      e.preventDefault(); var a = $("pf-pw").value, b = $("pf-pw2").value;
+      if (a !== b) { msg("The two passwords are not the same.", true); return; }
+      if (a.length < 8) { msg("Use at least 8 characters.", true); return; }
+      $("pfPwBtn").disabled = true;
+      token().then(function (tk) { return fetch(SB.url + "/auth/v1/user", { method: "PUT", headers: { apikey: SB.key, Authorization: "Bearer " + tk, "Content-Type": "application/json" }, body: JSON.stringify({ password: a }) }); })
+        .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { if (!r.ok) throw new Error(j.msg || j.message || "The password could not be changed."); }); })
+        .then(function () { $("pf-pw").value = ""; $("pf-pw2").value = ""; msg("Your password is changed. Use it the next time you sign in."); })
+        .catch(function (er) { msg(er.message, true); })
+        .then(function () { var btn = $("pfPwBtn"); if (btn) btn.disabled = false; });
+    };
+  }
   function renderStaff() {
     var current = state.staff.filter(function (s) { return !s.left_at; }), left = state.staff.filter(function (s) { return s.left_at; });
     var frozenN = current.filter(function (s) { return !s.active; }).length;
@@ -619,7 +675,7 @@
     var card = function (s) {
       var on = SWITCHES.filter(function (x) { return s.role === "owner" || s[x[0]]; }).map(function (x) { return '<span class="chip">' + esc(x[1].replace(/ \(.*\)$/, "")) + "</span>"; }).join("") || '<span class="meta2">Can look only</span>';
       var me = access && s.email === access.email, o = openWork(s.email), lk = linkCount(s.email);
-      return '<div class="item" data-id="' + esc(s.email) + '"><div class="main"><h3>' + esc(s.name || s.email) + (me ? ' <span class="chip">You</span>' : "") + '</h3><div class="meta2">' + esc(s.email) + " · " + esc(ROLES[s.role] ? ROLES[s.role].label : s.role) + (state.requests.length || lk ? " · " + o + " open lead" + (o === 1 ? "" : "s") + (lk ? " · " + lk + " link" + (lk === 1 ? "" : "s") : "") : "") + "</div>" +
+      return '<div class="item" data-id="' + esc(s.email) + '">' + avatarHtml(s.avatar_url, s.name || s.email, 52) + '<div class="main"><h3>' + esc(s.name || s.email) + (me ? ' <span class="chip">You</span>' : "") + '</h3><div class="meta2">' + esc(s.email) + " · " + esc(ROLES[s.role] ? ROLES[s.role].label : s.role) + (state.requests.length || lk ? " · " + o + " open lead" + (o === 1 ? "" : "s") + (lk ? " · " + lk + " link" + (lk === 1 ? "" : "s") : "") : "") + "</div>" +
         '<div style="margin-top:6px"><span class="chip ' + (s.active ? "ok" : "off") + '">' + (s.active ? "Active" : "Frozen") + "</span>" + on + "</div>" +
         '<div class="acts"><button class="btn sm" data-act="edits" type="button">Role and access</button>' +
         (me ? "" : '<button class="btn sec sm" data-act="actives" type="button">' + (s.active ? "Freeze" : "Unfreeze") + "</button>" + '<button class="btn danger sm" data-act="dels" type="button">Remove…</button>') + "</div></div></div>";

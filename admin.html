@@ -114,6 +114,23 @@
   .usercard{display:flex;gap:12px;align-items:center;padding:6px 8px 16px;border-bottom:1px solid rgba(255,255,255,.12)}
   .avatar{flex:0 0 auto;width:48px;height:48px;border-radius:50%;border:0;padding:0;cursor:pointer;background:#c9a24a center/cover no-repeat;color:var(--midnight);display:grid;place-items:center;font:inherit;font-weight:800;font-size:19px;overflow:hidden}
   .avatar:hover{box-shadow:0 0 0 3px rgba(224,194,125,.55)}
+  .pav{display:inline-grid;place-items:center;flex:0 0 auto;border-radius:50%;background:#c9a24a center/cover no-repeat;color:var(--midnight);font-weight:800;overflow:hidden}
+  .pfgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;align-items:start}
+  .pcard{background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px;min-width:0}
+  .pcard.wide{grid-column:1/-1}
+  .pcard h3{margin:0 0 8px;font-size:16px}
+  .profhead{display:flex;gap:18px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+  .profhead h2{margin:0 0 2px;font-size:24px}
+  .pfform{max-width:380px}
+  .chipsrow{display:flex;flex-wrap:wrap;gap:6px}
+  .pstats{display:flex;gap:28px;margin-top:16px}
+  .pstats b{display:block;font-size:26px;line-height:1.1}
+  .pstats span{color:var(--muted);font-size:13px}
+  .copyrow{display:flex;gap:8px}
+  .copyrow input{flex:1;min-width:0;padding:10px;border:1px solid var(--line);border-radius:10px;font:inherit;font-size:13px;background:#faf8f3;color:var(--ink)}
+  .mates{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+  .mate{display:flex;gap:12px;align-items:center;min-width:0}
+  .mate b{display:block}
   .photolink{display:block;border:0;background:none;padding:2px 0 0;margin:0;color:#e0c27d;font:inherit;font-size:12.5px;cursor:pointer;text-align:start;text-decoration:underline;text-underline-offset:2px}
   .usercard b{display:block;color:#fff;font-size:15px;line-height:1.25} .usercard small{color:#9dbcc3;font-size:12.5px}
   .navgroup{margin-top:16px}
@@ -279,6 +296,7 @@
         <button class="tab" data-tab="suggest" type="button">Center suggestions</button>
       </div>
       <div class="navgroup"><p class="navhead">Team</p>
+        <button class="tab" data-tab="profile" type="button">My profile</button>
         <button class="tab" data-tab="news" type="button">Announcements</button>
         <button class="tab" data-tab="staff" type="button">Team</button>
         <button class="tab" data-tab="history" type="button">Audit log</button>

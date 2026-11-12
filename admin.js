@@ -502,7 +502,10 @@
     if (unver) todo.push(["rooms", unver + " visible room" + (unver === 1 ? " is" : "s are") + " not verified yet."]);
     var nophoto = live.filter(function (r) { return !(r.photos && r.photos.length); }).length;
     if (nophoto) todo.push(["rooms", nophoto + " visible room" + (nophoto === 1 ? " has" : "s have") + " no photos."]);
-    if (can("rooms_edit") || can("leads_view")) { var noowner = state.rooms.filter(function (r) { return !r.owner_id; }).length; if (noowner) todo.push(["owners", noowner + " room" + (noowner === 1 ? " has" : "s have") + " no owner linked."]); }
+    if (can("leads_view")) {   // owners and agents are only needed once a student picks a room
+      var waiting = state.requests.filter(function (r) { var rm = roomOf(r); return rm && !rm.owner_id && r.status !== "rented" && r.status !== "lost"; }).length;
+      if (waiting) todo.push(["requests", waiting + " student request" + (waiting === 1 ? " is" : "s are") + " for a room with no owner or agent linked yet."]);
+    }
     if (!live.length && state.rooms.length) todo.push(["rooms", "No room is visible to students yet. Students see an empty page."]);
     out += '<div class="item" style="display:block"><h3>Set-up checklist</h3>' + (todo.length ? todo.map(function (t) { return '<div class="todo"><span>' + esc(t[1]) + '</span><button type="button" class="btn sec sm" data-go="' + t[0] + '">Open</button></div>'; }).join("") : '<p class="meta2" style="margin:6px 0 0">Everything is set up.</p>') + "</div>";
     return out;
@@ -744,6 +747,14 @@
     var digits = String(r.whatsapp || "").replace(/\D/g, "");
     return digits.length >= 8 ? '<a href="https://wa.me/' + digits + '" target="_blank" rel="noopener">' + esc(r.whatsapp) + "</a>" : esc(r.whatsapp);
   }
+  // Who to contact to book the room once a student has picked it (private, staff only)
+  function ownerLine(room) {
+    if (!room || !(can("rooms_edit") || can("leads_view"))) return "";
+    var o = state.owners.filter(function (x) { return x.id === room.owner_id; })[0];
+    if (!o) return " · <b>owner or agent: not linked yet</b> (Rooms, Edit)";
+    var digits = String(o.phone || "").replace(/\D/g, "");
+    return " · owner or agent: " + esc(o.name) + (digits.length >= 8 ? ' · <a href="https://wa.me/' + digits + '" target="_blank" rel="noopener">WhatsApp</a>' : " · no phone yet");
+  }
   function leadCard(r) {
     var room = roomOf(r), edit = can("leads_edit"), notes = state.notes[r.id] || [], open = !!openNotes[r.id];
     var chipsH = '<span class="chip st-' + esc(r.status) + '">' + esc(statusLabel(r.status)) + "</span>" +
@@ -768,7 +779,7 @@
         (edit ? '<div class="fld" style="margin:10px 0 0"><textarea data-note placeholder="Write a note, for example: called, will visit Saturday" maxlength="1000"></textarea></div><button class="btn sm" data-act="lnote" type="button" style="margin-top:8px">Add note</button>' : "") + "</div>";
     }
     return '<div class="item lead" data-id="' + r.id + '"><div class="main"><h3>' + esc(room ? room.title_en : "Deleted room") + '</h3><div class="meta2">' +
-      esc(new Date(r.created_at).toLocaleString([], { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })) + " · " + esc(r.name) + " · " + phoneHtml(r) + " · language center: " + esc(centerName(r.center)) + (r.note ? " · “" + esc(r.note) + "”" : "") + "</div>" +
+      esc(new Date(r.created_at).toLocaleString([], { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })) + " · " + esc(r.name) + " · " + phoneHtml(r) + " · language center: " + esc(centerName(r.center)) + (r.note ? " · “" + esc(r.note) + "”" : "") + ownerLine(room) + "</div>" +
       '<div style="margin-top:6px">' + chipsH + '</div><div class="acts">' + acts + "</div>" + notesH + "</div></div>";
   }
   function renderLeadCards() {
@@ -870,7 +881,7 @@
     else if (act === "dels") { var rm = state.staff.filter(function (x) { return x.email === id; })[0]; if (rm) openRemoveForm(rm); }
     else if (act === "restores") { patchStaff(id, { active: true, left_at: null }, "Welcome back. They can sign in again with their old password, or you can set a new one in Edit access."); }
     else if (act === "edit") openRoomForm(state.rooms.filter(function (x) { return String(x.id) === id; })[0]);
-    else if (act === "toggle") { var r = state.rooms.filter(function (x) { return String(x.id) === id; })[0]; if (!r.published && !r.owner_id) { msg("Link an owner to this room first (Edit, then Owner). A room is not shown to students until we know who owns it.", true); return; } patchRoom(r.id, { published: !r.published }, r.published ? "Room hidden from the website." : "Room is now visible."); }
+    else if (act === "toggle") { var r = state.rooms.filter(function (x) { return String(x.id) === id; })[0]; patchRoom(r.id, { published: !r.published }, r.published ? "Room hidden from the website." : "Room is now visible."); }
     else if (act === "del") deleteRoom(state.rooms.filter(function (x) { return String(x.id) === id; })[0]);
     else if (act === "delreq") { if (confirm("Delete this request?")) api("/rest/v1/requests?id=eq." + encodeURIComponent(id), { method: "DELETE", write: true }).then(function () { msg("Request deleted."); loadAll(); }).catch(function (er) { msg(er.message, true); }); }
     else if (act === "addsug") openCenterForm(null, { id: slug(item.dataset.name), name_en: item.dataset.name, lat: item.dataset.lat, lng: item.dataset.lng });
@@ -1079,7 +1090,7 @@
       '<div class="fld"><label for="f-beds">Bedrooms</label><input id="f-beds" name="beds" type="number" min="0" max="20" required value="' + esc(r.beds) + '"></div>' +
       '<div class="fld"><label for="f-min">Minimum stay (months)</label><input id="f-min" name="min_stay" type="number" min="1" max="60" required value="' + esc(r.min_stay) + '"></div>' +
       '<div class="fld"><span>Who lives here</span>' + sel("gender", [["mixed", "Mixed"], ["women", "Women only"], ["men", "Men only"], ["family", "Families"]], r.gender) + "</div>" +
-      '<div class="fld"><span>Owner (private, staff only)</span>' + sel("owner_id", [["", "No owner linked"]].concat(state.owners.map(function (o) { return [o.id, o.name]; })), r.owner_id == null ? "" : r.owner_id) + "</div></div>" +
+      '<div class="fld"><span>Owner or agent (private, staff only; can wait until a student picks this room)</span>' + sel("owner_id", [["", "Not linked yet"]].concat(state.owners.map(function (o) { return [o.id, o.name]; })), r.owner_id == null ? "" : r.owner_id) + "</div></div>" +
       chk("furnished", "Furnished", r.furnished) + chk("bills", "Bills included in the price", r.bills) + "</fieldset>" +
       ("available_from" in (state.rooms[0] || {}) ? '<fieldset><legend>For students</legend><div class="row2">' +
         '<div class="fld"><label for="f-af">Available from (empty = now)</label><input id="f-af" name="available_from" type="date" value="' + esc(r.available_from || "") + '"></div>' +
@@ -1187,7 +1198,6 @@
   function saveRoom(old, isNew) {
     var f = $("rf"), d = new FormData(f), co = parseCoords(d.get("coords"));
     if (!co) { msg("Coordinates look wrong. Use the format: 3.1570, 101.7120", true); return; }
-    if (f.published.checked && !num(d.get("owner_id"))) { msg("Choose an owner for this room before making it visible. Every room on Qareeb must have an owner linked (private, staff only).", true); return; }
     if (outsideMalaysia(co) && !confirm("These coordinates are outside Malaysia. Save anyway?")) return;
     var body = {
       type: d.get("type"), area: d.get("area").trim(), price: Number(d.get("price")), status: d.get("status"), beds: Number(d.get("beds")),

@@ -20,6 +20,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
 <link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="vendor/qareeb-fx.css">
 </head>
 <body>
 <header class="top">
@@ -39,8 +40,8 @@
 
 <section class="hero">
   <div class="wrap">
-    <p class="eyebrow" data-i18n="heroEyebrow">Your guide to student housing in Kuala Lumpur</p>
-    <h1 data-i18n="heroTitle">Find a room within walking distance of your language center</h1>
+    <p class="eyebrow" data-fx="shiny"><span class="fxsrc" data-i18n="heroEyebrow">Your guide to student housing in Kuala Lumpur</span></p>
+    <h1 data-fx="split-load"><span class="fxsrc" data-i18n="heroTitle">Find a room within walking distance of your language center</span></h1>
     <p class="lead" data-i18n="heroSub">Type your center, see the closest rooms first, and know what has been verified before you pay.</p>
   </div>
 </section>
@@ -133,7 +134,7 @@
     <li><b data-i18n="val2t">Fast</b></li>
     <li><b data-i18n="val3t">Quality</b></li>
   </ul>
-  <h2 id="howT" data-i18n="hiwTitle">How Qareeb works</h2>
+  <h2 id="howT" data-fx="split-view"><span class="fxsrc" data-i18n="hiwTitle">How Qareeb works</span></h2>
   <ol class="steps">
     <li><span class="n">1</span><h3 data-i18n="hiw1t">Choose your language center</h3><p data-i18n="hiw1d">Type its name, or drop a pin on the map. Every distance is measured from there.</p></li>
     <li><span class="n">2</span><h3 data-i18n="hiw2t">See the closest rooms first</h3><p data-i18n="hiw2d">Rooms within walking distance come first, with the cost to move in and what has been verified.</p></li>
@@ -195,5 +196,7 @@
 <script src="amenities.js"></script>
 <script src="sitetext.js"></script>
 <script src="app.js"></script>
+<!-- Motion: GSAP, Lenis and React Bits in one file. Source in /fx, rebuild with: cd fx && npm run build -->
+<script src="vendor/qareeb-fx.js" defer></script>
 </body>
 </html>

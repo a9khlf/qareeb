@@ -380,3 +380,17 @@ footer::before{background:var(--gold)}
 .dist.hl li{margin:6px 0;font-weight:600}
 .dist.rules ul{padding-inline-start:20px;list-style:disc}
 .dist.rules li{margin:4px 0}
+
+/* ===== Motion layer (GSAP, Lenis, React Bits). Built from /fx into vendor/qareeb-fx.js ===== */
+/* Lenis smooth scroll */
+html.lenis,html.lenis body{height:auto}
+.lenis.lenis-smooth{scroll-behavior:auto!important}
+.lenis.lenis-smooth [data-lenis-prevent]{overscroll-behavior:contain}
+.lenis.lenis-stopped{overflow:clip}
+.lenis.lenis-smooth iframe{pointer-events:none}
+/* Text effects: the plain text (.fxsrc) stays for screen readers and search engines; the effect copy (.fxhost) is what people see */
+.fx-on>.fxsrc{position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap}
+.fxhost{display:inline}
+.hero h1 .fxhost,.how h2 .fxhost{display:inline-block;max-width:100%}
+.hero .eyebrow .shiny-text{vertical-align:middle}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}

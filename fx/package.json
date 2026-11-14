@@ -1,0 +1,17 @@
+{
+  "name": "qareeb-fx",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Motion layer for Qareeb: GSAP, Lenis and React Bits, bundled into ../vendor/qareeb-fx.js",
+  "scripts": {
+    "build": "node build.mjs"
+  },
+  "dependencies": {
+    "@gsap/react": "^2.1.2",
+    "esbuild": "^0.25.0",
+    "gsap": "^3.13.0",
+    "lenis": "^1.3.11",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  }
+}
